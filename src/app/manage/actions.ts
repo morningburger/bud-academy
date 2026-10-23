@@ -194,3 +194,93 @@ export async function createInstructorByAdmin(_prev: ActionState, form: FormData
   revalidatePath("/", "layout");
   return { ok: `${name} 강사를 등록했어요.` };
 }
+
+/* ── 강사진 (관리자) ── */
+export async function addLineup(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const viewer = await getViewer();
+  if (!viewer?.isAdmin) return { error: "관리자만 할 수 있어요." };
+  const courseId = str(form, "course_id");
+  const instructorId = str(form, "instructor_id");
+  if (!instructorId) return { error: "강사를 골라 주세요." };
+  const supabase = await createClient();
+  const { count } = await supabase.from("course_instructors").select("course_id", { count: "exact", head: true }).eq("course_id", courseId);
+  const { error } = await supabase.from("course_instructors").insert({
+    course_id: courseId,
+    instructor_id: instructorId,
+    role: strOrNull(form, "role"),
+    position: (count ?? 0) + 1,
+  });
+  if (error) return { error: error.code === "23505" ? "이미 강사진에 있어요." : "추가하지 못했어요." };
+  revalidatePath("/", "layout");
+  return { ok: "강사진에 추가했어요." };
+}
+
+export async function updateLineup(form: FormData) {
+  const viewer = await getViewer();
+  if (!viewer?.isAdmin) return;
+  const supabase = await createClient();
+  const position = Number(str(form, "position"));
+  await supabase
+    .from("course_instructors")
+    .update({ role: strOrNull(form, "role"), ...(Number.isFinite(position) ? { position } : {}) })
+    .eq("course_id", str(form, "course_id"))
+    .eq("instructor_id", str(form, "instructor_id"));
+  revalidatePath("/", "layout");
+}
+
+export async function removeLineup(form: FormData) {
+  const viewer = await getViewer();
+  if (!viewer?.isAdmin) return;
+  const supabase = await createClient();
+  await supabase.from("course_instructors").delete()
+    .eq("course_id", str(form, "course_id"))
+    .eq("instructor_id", str(form, "instructor_id"));
+  revalidatePath("/", "layout");
+}
+
+/* ── 상세 이미지 ── */
+export async function addGalleryImages(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const viewer = await getViewer();
+  if (!viewer) return { error: "로그인이 필요해요." };
+  const courseId = str(form, "course_id");
+  const files = form.getAll("images").filter((f): f is File => f instanceof File && f.size > 0);
+  if (!files.length) return { error: "올릴 이미지를 골라 주세요." };
+  const total = files.reduce((n, f) => n + f.size, 0);
+  if (total > 4 * 1024 * 1024) return { error: "한 번에 4MB까지 올릴 수 있어요. 나눠서 올려 주세요." };
+  const supabase = await createClient();
+  const urls: string[] = [];
+  try {
+    for (const f of files) {
+      const url = await uploadImage(supabase, viewer.userId, f, "gallery");
+      if (url) urls.push(url);
+    }
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  const { data: course } = await supabase.from("courses").select("gallery").eq("id", courseId).maybeSingle();
+  if (!course) return { error: "강좌를 찾을 수 없어요." };
+  const { error } = await supabase.from("courses").update({ gallery: [...(course.gallery ?? []), ...urls] }).eq("id", courseId);
+  if (error) return { error: dbError(error.message) };
+  revalidatePath("/", "layout");
+  return { ok: `${urls.length}장을 추가했어요.` };
+}
+
+export async function updateGallery(form: FormData) {
+  const supabase = await createClient();
+  const courseId = str(form, "course_id");
+  const url = str(form, "url");
+  const op = str(form, "op"); // remove | up | down | cover
+  const { data: course } = await supabase.from("courses").select("gallery, thumbnail_url").eq("id", courseId).maybeSingle();
+  if (!course) return;
+  const list: string[] = [...(course.gallery ?? [])];
+  const i = list.indexOf(url);
+  if (op === "cover") {
+    await supabase.from("courses").update({ thumbnail_url: url }).eq("id", courseId);
+  } else if (i >= 0) {
+    if (op === "remove") list.splice(i, 1);
+    if (op === "up" && i > 0) [list[i - 1], list[i]] = [list[i], list[i - 1]];
+    if (op === "down" && i < list.length - 1) [list[i + 1], list[i]] = [list[i], list[i + 1]];
+    await supabase.from("courses").update({ gallery: list }).eq("id", courseId);
+  }
+  revalidatePath("/", "layout");
+}

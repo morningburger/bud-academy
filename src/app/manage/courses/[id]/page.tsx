@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireViewer } from "@/lib/auth";
-import { loadInstructorOptions, loadManagedCourse } from "../../load";
+import { loadInstructorOptions, loadLineup, loadManagedCourse } from "../../load";
+import { LineupEditor } from "@/components/lineup-editor";
+import { GalleryEditor } from "@/components/gallery-editor";
 import { CourseForm } from "@/components/course-form";
 import { SessionForm, SessionEditToggle } from "@/components/session-form";
 import { EnrollmentActions } from "@/components/enrollment-actions";
@@ -18,14 +20,21 @@ export default async function ManageCoursePage({ params, searchParams }: PagePro
   if (!course) notFound();
   const isOwner = course.instructor?.user_id === viewer.userId;
   if (!viewer.isAdmin && !isOwner) notFound();
-  const instructors = viewer.isAdmin ? await loadInstructorOptions() : [];
+  const [instructors, lineup] = viewer.isAdmin ? await Promise.all([loadInstructorOptions(), loadLineup(id)]) : [[], []];
   const sessionLabel = new Map(sessions.map((s) => [s.id, s.label]));
-  const active = tab === "info" || tab === "sessions" ? tab : "enrollments";
+  const TABS: [string, string][] = [
+    ["enrollments", "신청자"],
+    ["sessions", "회차"],
+    ...(viewer.isAdmin ? ([["lineup", "강사진"]] as [string, string][]) : []),
+    ["info", "강좌 정보"],
+    ["photos", "사진"],
+  ];
+  const active = TABS.some(([k]) => k === tab) ? (tab as string) : "enrollments";
   const waiting = enrollments.filter((e) => e.status === "requested").length;
 
   return (
     <div className="mx-auto max-w-[880px] px-4 sm:px-6 pt-8">
-      <Link href={viewer.isAdmin ? "/admin?tab=courses" : "/studio"} className="text-[14px] text-sub hover:text-ink">
+      <Link href={viewer.isAdmin ? "/admin/courses" : "/studio"} className="text-[14px] text-sub hover:text-ink">
         ‹ {viewer.isAdmin ? "관리자" : "강사 스튜디오"}
       </Link>
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
@@ -88,16 +97,12 @@ export default async function ManageCoursePage({ params, searchParams }: PagePro
         </form>
       )}
 
-      <nav className="mt-8 flex gap-1 border-b border-line">
-        {[
-          ["enrollments", `신청자 ${waiting ? `(${waiting})` : ""}`],
-          ["sessions", "회차"],
-          ["info", "강좌 정보"],
-        ].map(([key, label]) => (
+      <nav className="mt-8 flex gap-1 border-b border-line overflow-x-auto">
+        {TABS.map(([key, base]) => [key, key === "enrollments" && waiting ? `${base} (${waiting})` : base]).map(([key, label]) => (
           <Link
             key={key}
             href={`?tab=${key}`}
-            className={`px-4 h-11 inline-flex items-center text-[15px] font-semibold border-b-2 -mb-px ${
+            className={`px-4 h-11 inline-flex items-center whitespace-nowrap text-[15px] font-semibold border-b-2 -mb-px ${
               active === key ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink-2"
             }`}
           >
@@ -167,6 +172,14 @@ export default async function ManageCoursePage({ params, searchParams }: PagePro
               <SessionForm courseId={course.id} />
             </div>
           </div>
+        )}
+
+        {active === "lineup" && viewer.isAdmin && (
+          <LineupEditor courseId={course.id} rows={lineup} options={instructors} />
+        )}
+
+        {active === "photos" && (
+          <GalleryEditor courseId={course.id} images={course.gallery ?? []} cover={course.thumbnail_url} />
         )}
 
         {active === "info" && (

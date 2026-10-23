@@ -15,6 +15,22 @@ export async function loadManagedCourse(id: string) {
   };
 }
 
+export async function loadLineup(courseId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("course_instructors")
+    .select("instructor_id, role, position, instructor:instructors(name, photo_url, headline)")
+    .eq("course_id", courseId)
+    .order("position");
+  return ((data ?? []) as unknown as {
+    instructor_id: string; role: string | null; position: number;
+    instructor: { name: string; photo_url: string | null; headline: string | null } | null;
+  }[]).map((r) => ({
+    instructor_id: r.instructor_id, role: r.role, position: r.position,
+    name: r.instructor?.name ?? "", photo_url: r.instructor?.photo_url ?? null, headline: r.instructor?.headline ?? null,
+  }));
+}
+
 export async function loadInstructorOptions() {
   const supabase = await createClient();
   const { data } = await supabase.from("instructors").select("id, name").eq("status", "approved").order("name");
