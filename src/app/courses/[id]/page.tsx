@@ -200,7 +200,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
           )}
         </div>
 
-        <aside className="lg:sticky lg:top-20 self-start panel p-5">
+        <aside id="apply" className="lg:sticky lg:top-20 self-start panel p-5 scroll-mt-20">
           <p className="text-[14px] text-sub">{course.title}</p>
           <p className="mt-1 text-[24px] font-extrabold tracking-[-0.03em]">{formatPrice(course.price)}</p>
           {course.price_note && <p className="text-[13px] text-sub">{course.price_note}</p>}
@@ -239,6 +239,18 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
           </div>
         </aside>
       </div>
+
+      {/* 모바일: 신청 영역으로 바로 가는 하단 바 */}
+      <div className="lg:hidden fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 backdrop-blur px-4 py-3 flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[17px] font-extrabold tracking-[-0.03em]">{formatPrice(course.price)}</p>
+          <p className="text-[12px] text-sub truncate">{course.price_note ?? course.schedule_summary ?? ""}</p>
+        </div>
+        <a href="#apply" className="btn-primary px-6">
+          {myEnrollment ? "신청 현황" : waitingNextRound || course.status !== "published" ? "모집 안내" : "신청하기"}
+        </a>
+      </div>
+      <div className="lg:hidden h-20" aria-hidden />
     </div>
   );
 }

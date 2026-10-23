@@ -36,7 +36,8 @@ export async function listSessions(courseId: string) {
       .select("*")
       .eq("course_id", courseId)
       .neq("status", "canceled")
-      .order("starts_on", { ascending: true, nullsFirst: false }),
+      .order("starts_on", { ascending: true, nullsFirst: false })
+      .order("label", { ascending: true }),
     supabase.rpc("session_seats", { p_course_id: courseId }),
   ]);
   const taken = new Map<string, number>(
