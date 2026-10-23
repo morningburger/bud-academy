@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
+/* 토스 계열 톤: 흰 바탕, 회색 면, 파란 포인트. 라이트 테마 고정 */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #f2f4f6;
+  --surface-strong: #e5e8eb;
+  --line: #e5e8eb;
+  --ink: #191f28;
+  --ink-2: #333d4b;
+  --sub: #4e5968;
+  --muted: #8b95a1;
+  --blue: #3182f6;
+  --blue-press: #1b64da;
+  --blue-weak: #e8f3ff;
+  --green: #03b26c;
+  --green-weak: #e5f8f0;
+  --red: #f04452;
+  --red-weak: #ffeeee;
+  --orange: #fe9800;
+  --orange-weak: #fff3e0;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-sub: var(--sub);
+  --color-muted: var(--muted);
+  --color-blue: var(--blue);
+  --color-blue-press: var(--blue-press);
+  --color-blue-weak: var(--blue-weak);
+  --color-green: var(--green);
+  --color-green-weak: var(--green-weak);
+  --color-red: var(--red);
+  --color-red-weak: var(--red-weak);
+  --color-orange: var(--orange);
+  --color-orange-weak: var(--orange-weak);
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html { -webkit-text-size-adjust: 100%; }
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+  word-break: keep-all;
 }
+
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* 공통 컴포넌트 (Tailwind v4: @apply로 재사용하려면 @utility) */
+@utility btn {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-4 h-11 text-[15px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+}
+@utility btn-primary { @apply btn bg-blue text-white hover:bg-blue-press; }
+@utility btn-weak { @apply btn bg-blue-weak text-blue hover:bg-[#d3e6ff]; }
+@utility btn-gray { @apply btn bg-surface text-ink-2 hover:bg-surface-strong; }
+@utility btn-danger { @apply btn bg-red-weak text-red hover:bg-[#ffdede]; }
+@utility btn-sm { @apply h-9 px-3 text-sm rounded-lg; }
+@utility btn-lg { @apply h-14 text-[17px] rounded-2xl; }
+
+@utility field-label { @apply block text-[13px] font-medium text-sub mb-1.5; }
+@utility input {
+  @apply w-full rounded-xl bg-surface px-4 h-12 text-[16px] text-ink placeholder:text-muted outline-none border border-transparent focus:border-blue focus:bg-white transition-colors;
+}
+@utility textarea-input { @apply h-auto py-3 leading-relaxed; }
+
+@utility chip { @apply inline-flex items-center rounded-md px-2 py-0.5 text-[12px] font-semibold whitespace-nowrap; }
+@utility chip-blue { @apply chip bg-blue-weak text-blue; }
+@utility chip-gray { @apply chip bg-surface text-sub; }
+@utility chip-green { @apply chip bg-green-weak text-green; }
+@utility chip-red { @apply chip bg-red-weak text-red; }
+@utility chip-orange { @apply chip bg-orange-weak text-orange; }
+
+@utility panel { @apply rounded-2xl bg-white border border-line; }

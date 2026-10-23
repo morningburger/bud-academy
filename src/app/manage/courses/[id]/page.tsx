@@ -1,0 +1,178 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireViewer } from "@/lib/auth";
+import { loadInstructorOptions, loadManagedCourse } from "../../load";
+import { CourseForm } from "@/components/course-form";
+import { SessionForm, SessionEditToggle } from "@/components/session-form";
+import { EnrollmentActions } from "@/components/enrollment-actions";
+import { CourseStatusChip, EnrollmentStatusChip } from "@/components/status-chip";
+import { deleteSession, setCourseStatus } from "../../actions";
+import { formatDateTime, formatRange } from "@/lib/format";
+
+export default async function ManageCoursePage({ params, searchParams }: PageProps<"/manage/courses/[id]">) {
+  const { id } = await params;
+  const { tab } = await searchParams;
+  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  const viewer = await requireViewer(`/manage/courses/${id}`);
+  const { course, sessions, enrollments } = await loadManagedCourse(id);
+  if (!course) notFound();
+  const isOwner = course.instructor?.user_id === viewer.userId;
+  if (!viewer.isAdmin && !isOwner) notFound();
+  const instructors = viewer.isAdmin ? await loadInstructorOptions() : [];
+  const sessionLabel = new Map(sessions.map((s) => [s.id, s.label]));
+  const active = tab === "info" || tab === "sessions" ? tab : "enrollments";
+  const waiting = enrollments.filter((e) => e.status === "requested").length;
+
+  return (
+    <div className="mx-auto max-w-[880px] px-4 sm:px-6 pt-8">
+      <Link href={viewer.isAdmin ? "/admin?tab=courses" : "/studio"} className="text-[14px] text-sub hover:text-ink">
+        ‹ {viewer.isAdmin ? "관리자" : "강사 스튜디오"}
+      </Link>
+      <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <CourseStatusChip s={course.status} />
+            <span className="text-[14px] text-muted">{course.is_official ? "직영" : course.instructor?.name}</span>
+          </div>
+          <h1 className="mt-1.5 text-[26px] font-extrabold tracking-[-0.04em]">{course.title}</h1>
+        </div>
+        <Link href={`/courses/${course.id}`} className="btn-gray btn-sm" target="_blank">강좌 페이지 보기</Link>
+      </div>
+
+      {course.status === "rejected" && course.review_note && (
+        <div className="mt-4 rounded-xl bg-red-weak px-4 py-3 text-[14px] text-red">반려 사유: {course.review_note}</div>
+      )}
+      {course.status === "pending_review" && !viewer.isAdmin && (
+        <div className="mt-4 rounded-xl bg-orange-weak px-4 py-3 text-[14px] text-[#a35f00]">검수 중이에요. 승인되면 강좌 페이지가 공개돼요.</div>
+      )}
+
+      {viewer.isAdmin && (
+        <div className="mt-5 panel p-4 flex flex-wrap items-end gap-2">
+          {course.status !== "published" && (
+            <form action={setCourseStatus}>
+              <input type="hidden" name="id" value={course.id} />
+              <input type="hidden" name="status" value="published" />
+              <input type="hidden" name="review_note" value="" />
+              <button className="btn-primary btn-sm">승인하고 공개</button>
+            </form>
+          )}
+          {course.status === "published" && (
+            <form action={setCourseStatus}>
+              <input type="hidden" name="id" value={course.id} />
+              <input type="hidden" name="status" value="closed" />
+              <button className="btn-gray btn-sm">모집 마감</button>
+            </form>
+          )}
+          {course.status !== "rejected" && !course.is_official && (
+            <form action={setCourseStatus} className="flex flex-1 min-w-[260px] gap-2">
+              <input type="hidden" name="id" value={course.id} />
+              <input type="hidden" name="status" value="rejected" />
+              <input name="review_note" className="input h-9 text-[14px]" placeholder="반려 사유 (강사에게 보여요)" required />
+              <button className="btn-danger btn-sm shrink-0">반려</button>
+            </form>
+          )}
+          {course.status !== "draft" && (
+            <form action={setCourseStatus}>
+              <input type="hidden" name="id" value={course.id} />
+              <input type="hidden" name="status" value="draft" />
+              <button className="btn-gray btn-sm">비공개로</button>
+            </form>
+          )}
+        </div>
+      )}
+      {!viewer.isAdmin && (course.status === "published" || course.status === "closed") && (
+        <form action={setCourseStatus} className="mt-5">
+          <input type="hidden" name="id" value={course.id} />
+          <input type="hidden" name="status" value={course.status === "published" ? "closed" : "published"} />
+          <button className="btn-gray btn-sm">{course.status === "published" ? "모집 마감하기" : "모집 다시 열기"}</button>
+        </form>
+      )}
+
+      <nav className="mt-8 flex gap-1 border-b border-line">
+        {[
+          ["enrollments", `신청자 ${waiting ? `(${waiting})` : ""}`],
+          ["sessions", "회차"],
+          ["info", "강좌 정보"],
+        ].map(([key, label]) => (
+          <Link
+            key={key}
+            href={`?tab=${key}`}
+            className={`px-4 h-11 inline-flex items-center text-[15px] font-semibold border-b-2 -mb-px ${
+              active === key ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink-2"
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="pt-6">
+        {active === "enrollments" && (
+          enrollments.length === 0 ? (
+            <p className="rounded-2xl bg-surface py-14 text-center text-sub">아직 신청자가 없어요.</p>
+          ) : (
+            <ul className="divide-y divide-line">
+              {enrollments.map((e) => (
+                <li key={e.id} className="py-4 flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <EnrollmentStatusChip s={e.status} />
+                      <span className="font-bold">{e.applicant_name}</span>
+                      <a href={`tel:${e.applicant_phone}`} className="text-[14px] text-blue">{e.applicant_phone.replace(/(\d{3})(\d{3,4})(\d{4})/, "$1-$2-$3")}</a>
+                    </div>
+                    <p className="text-[13px] text-muted mt-1">
+                      {[e.session_id ? sessionLabel.get(e.session_id) : null, `${formatDateTime(e.created_at)} 신청`].filter(Boolean).join(" · ")}
+                    </p>
+                    {e.message && <p className="text-[14px] text-ink-2 mt-1.5 whitespace-pre-line">{e.message}</p>}
+                  </div>
+                  <EnrollmentActions id={e.id} status={e.status} />
+                </li>
+              ))}
+            </ul>
+          )
+        )}
+
+        {active === "sessions" && (
+          <div className="flex flex-col gap-6">
+            {sessions.length > 0 && (
+              <ul className="divide-y divide-line border-y border-line">
+                {sessions.map((s) => {
+                  const taken = enrollments.filter((e) => e.session_id === s.id && (e.status === "approved" || e.status === "completed")).length;
+                  return (
+                    <li key={s.id} className="py-4 flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="font-semibold">
+                          {s.label}{" "}
+                          {s.status !== "open" && <span className="chip-gray ml-1">{s.status === "closed" ? "마감" : "취소"}</span>}
+                        </p>
+                        <p className="text-[14px] text-sub">
+                          {[formatRange(s.starts_on, s.ends_on), s.schedule_text, s.location, `확정 ${taken}${s.capacity ? `/${s.capacity}` : ""}명`].filter(Boolean).join(" · ")}
+                        </p>
+                      </div>
+                      <div className="flex gap-1.5 flex-wrap justify-end">
+                        <SessionEditToggle courseId={course.id} session={s} />
+                        <form action={deleteSession}>
+                          <input type="hidden" name="id" value={s.id} />
+                          <input type="hidden" name="course_id" value={course.id} />
+                          <button className="btn-gray btn-sm">삭제</button>
+                        </form>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <div className="panel p-5">
+              <h2 className="font-bold mb-4">회차 추가</h2>
+              <SessionForm courseId={course.id} />
+            </div>
+          </div>
+        )}
+
+        {active === "info" && (
+          <CourseForm course={course} isAdmin={viewer.isAdmin} instructors={instructors} />
+        )}
+      </div>
+    </div>
+  );
+}
