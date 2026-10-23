@@ -1,4 +1,4 @@
-export type CourseCategory = "designer" | "perm" | "trend" | "special" | "etc";
+export type CourseTrack = "level" | "guest" | "brand" | "leadership" | "trend" | "etc";
 export type CourseFormat = "offline" | "online" | "hybrid";
 export type CourseStatus = "draft" | "pending_review" | "published" | "rejected" | "closed";
 export type InstructorStatus = "pending" | "approved" | "rejected" | "suspended";
@@ -24,7 +24,8 @@ export interface Course {
   id: string;
   instructor_id: string | null;
   is_official: boolean;
-  category: CourseCategory;
+  track: CourseTrack;
+  level: number | null;
   format: CourseFormat;
   title: string;
   summary: string | null;
@@ -33,6 +34,13 @@ export interface Course {
   price: number | null;
   thumbnail_url: string | null;
   location: string | null;
+  curriculum: CurriculumItem[];
+  materials: string[];
+  eligibility: string | null;
+  price_note: string | null;
+  gallery: string[];
+  schedule_summary: string | null;
+  sort_order: number;
   status: CourseStatus;
   review_note: string | null;
   published_at: string | null;
@@ -66,4 +74,15 @@ export interface Enrollment {
   created_at: string;
 }
 
-export type CourseWithInstructor = Course & { instructor: Instructor | null };
+export interface CurriculumItem {
+  title: string;
+  detail?: string;
+}
+
+export interface LineupEntry {
+  role: string | null;
+  position: number;
+  instructor: Pick<Instructor, "id" | "name" | "headline" | "photo_url" | "affiliation" | "branch_name"> | null;
+}
+
+export type CourseWithInstructor = Course & { instructor: Instructor | null; lineup?: LineupEntry[] };

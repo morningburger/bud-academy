@@ -38,7 +38,21 @@ export async function saveCourse(_prev: ActionState, form: FormData): Promise<Ac
     summary: strOrNull(form, "summary"),
     description: strOrNull(form, "description"),
     audience: strOrNull(form, "audience"),
-    category: str(form, "category") || "etc",
+    track: str(form, "track") || "etc",
+    level: str(form, "level") ? Number(str(form, "level")) : null,
+    schedule_summary: strOrNull(form, "schedule_summary"),
+    eligibility: strOrNull(form, "eligibility"),
+    price_note: strOrNull(form, "price_note"),
+    curriculum: str(form, "curriculum")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [title, ...rest] = line.split("|");
+        const detail = rest.join("|").trim();
+        return detail ? { title: title.trim(), detail } : { title: title.trim() };
+      }),
+    materials: str(form, "materials").split("\n").map((l) => l.trim()).filter(Boolean),
     format: str(form, "format") || "offline",
     location: strOrNull(form, "location"),
     price: priceRaw === "" ? null : Number(priceRaw),

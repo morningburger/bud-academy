@@ -22,7 +22,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
 
   const [{ data: ins }, { data: crs }, { data: enr }] = await Promise.all([
     supabase.from("instructors").select("*, settings:instructor_settings(commission_rate, review_note)").order("created_at", { ascending: false }),
-    supabase.from("courses").select("*, instructor:instructors(name)").order("updated_at", { ascending: false }),
+    supabase.from("courses").select("*, instructor:instructors!courses_instructor_id_fkey(name)").order("updated_at", { ascending: false }),
     supabase
       .from("enrollments")
       .select("*, course:courses(id, title), session:course_sessions(label)")

@@ -1,26 +1,31 @@
 import { createClient } from "./supabase/server";
 import type { CourseSession, CourseWithInstructor, Instructor } from "./types";
 
-const COURSE_SELECT = "*, instructor:instructors(*)";
+const COURSE_SELECT =
+  "*, instructor:instructors!courses_instructor_id_fkey(*), lineup:course_instructors(role, position, instructor:instructors(id, name, headline, photo_url, affiliation, branch_name))";
 
-export async function listPublicCourses(category?: string) {
+function sortLineup<T extends CourseWithInstructor>(c: T): T {
+  return { ...c, lineup: [...(c.lineup ?? [])].filter((l) => l.instructor).sort((a, b) => a.position - b.position) };
+}
+
+export async function listPublicCourses(track?: string) {
   const supabase = await createClient();
   let q = supabase
     .from("courses")
     .select(COURSE_SELECT)
     .in("status", ["published", "closed"])
-    .order("is_official", { ascending: false })
+    .order("sort_order", { ascending: true })
     .order("published_at", { ascending: false });
-  if (category) q = q.eq("category", category);
+  if (track) q = q.eq("track", track);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []) as CourseWithInstructor[];
+  return ((data ?? []) as CourseWithInstructor[]).map(sortLineup);
 }
 
 export async function getCourse(id: string) {
   const supabase = await createClient();
   const { data } = await supabase.from("courses").select(COURSE_SELECT).eq("id", id).maybeSingle();
-  return data as CourseWithInstructor | null;
+  return data ? sortLineup(data as CourseWithInstructor) : null;
 }
 
 export async function listSessions(courseId: string) {
@@ -46,16 +51,22 @@ export async function listUpcomingSessions(limit = 6) {
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
   const { data } = await supabase
     .from("course_sessions")
-    .select("*, course:courses!inner(id, title, category, is_official, format, status, instructor:instructors(name, affiliation))")
+    .select("*, course:courses!inner(id, title, track, is_official, format, status, thumbnail_url, price)")
     .eq("status", "open")
     .eq("course.status", "published")
     .gte("starts_on", today)
     .order("starts_on", { ascending: true })
     .limit(limit);
   return (data ?? []) as (CourseSession & {
-    course: { id: string; title: string; category: string; is_official: boolean; format: string;
-      instructor: { name: string; affiliation: string } | null };
+    course: { id: string; title: string; track: string; is_official: boolean; format: string;
+      thumbnail_url: string | null; price: number | null };
   })[];
+}
+
+/** 홈 화면 단계별 로드맵 */
+export async function listLevelCourses() {
+  const all = await listPublicCourses("level");
+  return all.filter((c) => c.level !== null).sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
 }
 
 export async function listApprovedInstructors() {
@@ -71,12 +82,21 @@ export async function listApprovedInstructors() {
 
 export async function getInstructor(id: string) {
   const supabase = await createClient();
-  const [{ data: instructor }, { data: courses }] = await Promise.all([
+  const [{ data: instructor }, { data: own }, { data: teaching }] = await Promise.all([
     supabase.from("instructors").select("*").eq("id", id).maybeSingle(),
     supabase.from("courses").select(COURSE_SELECT).eq("instructor_id", id).in("status", ["published", "closed"]),
+    supabase.from("course_instructors").select("course_id").eq("instructor_id", id),
   ]);
+  const extraIds = ((teaching ?? []) as { course_id: string }[]).map((t) => t.course_id);
+  let extra: CourseWithInstructor[] = [];
+  if (extraIds.length) {
+    const { data } = await supabase.from("courses").select(COURSE_SELECT).in("id", extraIds).in("status", ["published", "closed"]);
+    extra = (data ?? []) as CourseWithInstructor[];
+  }
+  const all = new Map<string, CourseWithInstructor>();
+  for (const c of [...((own ?? []) as CourseWithInstructor[]), ...extra]) all.set(c.id, sortLineup(c));
   return {
     instructor: instructor as Instructor | null,
-    courses: (courses ?? []) as CourseWithInstructor[],
+    courses: [...all.values()].sort((a, b) => a.sort_order - b.sort_order),
   };
 }

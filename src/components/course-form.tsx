@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import type { Course, Instructor } from "@/lib/types";
-import { CATEGORY_LABEL, FORMAT_LABEL } from "@/lib/format";
+import { TRACK_LABEL, FORMAT_LABEL } from "@/lib/format";
 import { saveCourse, type ActionState } from "@/app/manage/actions";
 
 export function CourseForm({
@@ -44,9 +44,9 @@ export function CourseForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="field-label" htmlFor="category">분야</label>
-          <select id="category" name="category" className="input" defaultValue={course?.category ?? "etc"}>
-            {Object.entries(CATEGORY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          <label className="field-label" htmlFor="track">분야</label>
+          <select id="track" name="track" className="input" defaultValue={course?.track ?? "etc"}>
+            {Object.entries(TRACK_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
         <div>
@@ -66,6 +66,29 @@ export function CourseForm({
           <input id="audience" name="audience" className="input" defaultValue={course?.audience ?? ""} placeholder="예: 3년 차 이상 디자이너" />
         </div>
       </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="field-label" htmlFor="price_note">수강료 메모</label>
+          <input id="price_note" name="price_note" className="input" defaultValue={course?.price_note ?? ""} placeholder="예: 교재비 8만원 별도" />
+        </div>
+        <div>
+          <label className="field-label" htmlFor="level">단계 (단계별 과정만)</label>
+          <select id="level" name="level" className="input" defaultValue={course?.level ?? ""}>
+            <option value="">없음</option>
+            <option value="1">LV1</option>
+            <option value="2">LV2</option>
+            <option value="3">LV3</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="field-label" htmlFor="schedule_summary">일정 요약</label>
+        <input id="schedule_summary" name="schedule_summary" className="input" defaultValue={course?.schedule_summary ?? ""} placeholder="예: 매주 목요일 10:00~16:00 · 4회" />
+      </div>
+      <div>
+        <label className="field-label" htmlFor="eligibility">수강 자격 (선택)</label>
+        <input id="eligibility" name="eligibility" className="input" defaultValue={course?.eligibility ?? ""} placeholder="예: 고정현헤어 소속 인턴만 수강할 수 있어요." />
+      </div>
       <div>
         <label className="field-label" htmlFor="location">장소</label>
         <input id="location" name="location" className="input" defaultValue={course?.location ?? ""} placeholder="예: 고정현헤어 아카데미룸 (회차마다 다르면 비워두세요)" />
@@ -73,6 +96,15 @@ export function CourseForm({
       <div>
         <label className="field-label" htmlFor="description">강좌 소개</label>
         <textarea id="description" name="description" rows={8} className="input textarea-input" defaultValue={course?.description ?? ""} placeholder="무엇을 배우는지, 진행 방식, 준비물, 커리큘럼" />
+      </div>
+      <div>
+        <label className="field-label" htmlFor="curriculum">커리큘럼 (한 줄에 하나, 설명은 | 뒤에)</label>
+        <textarea id="curriculum" name="curriculum" rows={5} className="input textarea-input" placeholder={"아이롱펌 뿌리볼륨 테크닉\nDAY 1 · 리더로서 나를 세우다 | 리더십의 기초 / 7시간"}
+          defaultValue={(course?.curriculum ?? []).map((c) => (c.detail ? `${c.title} | ${c.detail}` : c.title)).join("\n")} />
+      </div>
+      <div>
+        <label className="field-label" htmlFor="materials">준비물 (한 줄에 하나)</label>
+        <textarea id="materials" name="materials" rows={3} className="input textarea-input" defaultValue={(course?.materials ?? []).join("\n")} />
       </div>
       <div>
         <label className="field-label" htmlFor="thumbnail">대표 이미지 (선택, 4MB 이하)</label>

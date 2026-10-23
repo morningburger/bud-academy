@@ -1,10 +1,11 @@
-import type { CourseCategory, CourseFormat, CourseStatus, EnrollmentStatus, InstructorStatus } from "./types";
+import type { CourseTrack, CourseFormat, CourseStatus, EnrollmentStatus, InstructorStatus } from "./types";
 
-export const CATEGORY_LABEL: Record<CourseCategory, string> = {
-  designer: "디자이너 양성",
-  perm: "열펌",
+export const TRACK_LABEL: Record<CourseTrack, string> = {
+  level: "단계별 과정",
+  guest: "초청 원장 클래스",
+  brand: "브랜드 교육",
+  leadership: "리더십",
   trend: "트렌드",
-  special: "특강",
   etc: "기타",
 };
 

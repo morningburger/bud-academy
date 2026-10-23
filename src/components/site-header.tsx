@@ -6,8 +6,9 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-line">
       <div className="mx-auto max-w-[1040px] px-4 sm:px-6 h-14 flex items-center gap-6">
-        <Link href="/" className="text-[19px] font-extrabold tracking-[-0.03em] text-ink">
-          버드아카데미
+        <Link href="/" className="shrink-0" aria-label="버드아카데미 홈">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo.png" alt="버드아카데미" className="h-[22px] w-auto" />
         </Link>
         <nav className="hidden sm:flex items-center gap-5 text-[15px] text-sub">
           <Link href="/courses" className="hover:text-ink">강좌</Link>
