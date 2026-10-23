@@ -26,7 +26,10 @@ export default async function ProfilePage({ searchParams }: PageProps<"/me/profi
         marketing={viewer.marketingAgreed}
         defaults={{ name: viewer.name, phone: viewer.phone, orgType: viewer.orgType, branch: viewer.branch, jobTitle: viewer.jobTitle }}
       />
-      <p className="mt-6 text-[13px] text-muted">이메일: {viewer.email}</p>
+      <div className="mt-6 flex items-center justify-between text-[13px] text-muted">
+        <span>이메일: {viewer.email}</span>
+        <Link href="/me/password" className="text-sub hover:text-ink font-semibold">비밀번호 바꾸기</Link>
+      </div>
     </div>
   );
 }

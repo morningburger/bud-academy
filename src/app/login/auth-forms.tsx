@@ -15,7 +15,10 @@ export function LoginForm({ next }: { next: string }) {
         <input id="email" name="email" type="email" className="input" required autoComplete="email" />
       </div>
       <div>
-        <label className="field-label" htmlFor="password">비밀번호</label>
+        <div className="flex items-center justify-between">
+          <label className="field-label" htmlFor="password">비밀번호</label>
+          <Link href="/login/forgot" className="text-[13px] text-sub hover:text-ink mb-1.5">비밀번호를 잊었어요</Link>
+        </div>
         <input id="password" name="password" type="password" className="input" required autoComplete="current-password" />
       </div>
       {state?.error && <p className="text-[14px] text-red">{state.error}</p>}

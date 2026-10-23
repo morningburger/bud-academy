@@ -8,10 +8,11 @@ export const metadata: Metadata = { title: { default: "관리자", template: "%s
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const viewer = await requireAdmin();
   const supabase = await createClient();
-  const [{ count: requests }, { count: pendingInstructors }, { count: pendingCourses }] = await Promise.all([
+  const [{ count: requests }, { count: pendingInstructors }, { count: pendingCourses }, { count: newSuggestions }] = await Promise.all([
     supabase.from("enrollments").select("id", { count: "exact", head: true }).eq("status", "approved").not("cancel_requested_at", "is", null),
     supabase.from("instructors").select("id", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("courses").select("id", { count: "exact", head: true }).eq("status", "pending_review"),
+    supabase.from("suggestions").select("id", { count: "exact", head: true }).eq("status", "new"),
   ]);
 
   return (
@@ -25,6 +26,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
             "/admin/enrollments": requests ?? 0,
             "/admin/instructors": pendingInstructors ?? 0,
             "/admin/courses": pendingCourses ?? 0,
+            "/admin/suggestions": newSuggestions ?? 0,
           }}
         />
       </aside>

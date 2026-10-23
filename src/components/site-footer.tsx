@@ -9,6 +9,7 @@ export function SiteFooter() {
           <Link href="/terms">이용약관</Link>
           <Link href="/privacy" className="text-ink-2 font-semibold">개인정보처리방침</Link>
           <Link href="/partner">강사 입점 안내</Link>
+          <Link href="/suggest">교육 건의</Link>
         </div>
         <p className="text-ink-2 font-semibold mb-1">버드아카데미</p>
         <p>대표 황인건 · 사업자등록번호 888-81-03707 · 통신판매업 신고번호 제2025-인천연수구-2660호</p>

@@ -51,12 +51,10 @@ export default async function MePage() {
             <span className="text-[15px]"><b>회원 정보</b> <span className="text-sub">소속·직급·연락처</span></span>
             <span className="text-muted" aria-hidden>›</span>
           </Link>
-          {!viewer.instructor && (
-            <Link href="/partner" className="flex items-center justify-between rounded-2xl bg-surface px-5 py-4 hover:bg-surface-strong">
-              <span className="text-[15px]"><b>강사로 활동하기</b> <span className="text-sub">입점 신청</span></span>
-              <span className="text-muted" aria-hidden>›</span>
-            </Link>
-          )}
+          <Link href="/suggest" className="flex items-center justify-between rounded-2xl bg-surface px-5 py-4 hover:bg-surface-strong">
+            <span className="text-[15px]"><b>교육 건의</b> <span className="text-sub">듣고 싶은 교육 알려 주기</span></span>
+            <span className="text-muted" aria-hidden>›</span>
+          </Link>
         </div>
       )}
 

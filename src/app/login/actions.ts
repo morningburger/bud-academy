@@ -54,3 +54,17 @@ export async function signUp(_prev: AuthState, form: FormData): Promise<AuthStat
   if (data.session) redirect(next);
   return { info: `${email}로 인증 메일을 보냈어요. 메일의 링크를 누르면 가입이 끝나요.` };
 }
+
+export async function requestPasswordReset(_prev: AuthState, form: FormData): Promise<AuthState> {
+  const email = String(form.get("email") ?? "").trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "이메일을 정확히 입력해 주세요." };
+  const h = await headers();
+  const origin = h.get("origin") ?? `https://${h.get("host")}`;
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/me/password")}`,
+  });
+  if (error?.status === 429) return { error: "잠시 후 다시 시도해 주세요. 메일은 몇 분에 한 번만 보낼 수 있어요." };
+  // 가입 여부는 알려주지 않는다
+  return { info: `${email}로 가입되어 있다면 비밀번호를 다시 정하는 메일을 보냈어요. 메일의 링크는 1시간 동안 쓸 수 있어요.` };
+}

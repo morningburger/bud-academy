@@ -98,3 +98,12 @@ export function cancelWindowOpen(startsOn: string | null | undefined, deadlineDa
 export function applyOpen(applyDeadline: string | null | undefined) {
   return !applyDeadline || todayKST() <= applyDeadline;
 }
+
+export const SUGGESTION_CATEGORY: Record<string, string> = {
+  topic: "듣고 싶은 교육",
+  instructor: "강사 추천",
+  operation: "운영 건의",
+  etc: "기타",
+};
+
+export const SUGGESTION_STATUS: Record<string, string> = { new: "새 건의", read: "확인함", done: "반영·답변 완료" };
