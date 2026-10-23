@@ -1,16 +1,14 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { EnrollmentActions } from "@/components/enrollment-actions";
-import { EnrollmentStatusChip } from "@/components/status-chip";
-import { formatDateTime } from "@/lib/format";
-import { STATUS_FILTERS, queryEnrollments } from "@/lib/admin-enrollments";
+import { EnrollmentItem } from "@/components/enrollment-item";
+import { DEFAULT_STATUS, STATUS_FILTERS, queryEnrollments } from "@/lib/admin-enrollments";
 
 export const metadata: Metadata = { title: "수강 신청" };
 
 export default async function AdminEnrollments({ searchParams }: PageProps<"/admin/enrollments">) {
   const sp = await searchParams;
-  const status = typeof sp.status === "string" ? sp.status : "requested";
+  const status = typeof sp.status === "string" ? sp.status : DEFAULT_STATUS;
   const course = typeof sp.course === "string" && sp.course ? sp.course : undefined;
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
 
@@ -32,7 +30,7 @@ export default async function AdminEnrollments({ searchParams }: PageProps<"/adm
         <h1 className="text-[26px] font-extrabold tracking-[-0.04em]">수강 신청</h1>
         <a href={`/admin/enrollments/export${qs({})}`} className="btn-gray btn-sm">엑셀로 내려받기</a>
       </div>
-      <p className="mt-1 text-sub text-[15px]">입금이 확인되면 &lsquo;입금 확인·확정&rsquo;을 눌러 주세요. 정원이 찬 회차는 확정되지 않아요.</p>
+      <p className="mt-1 text-sub text-[15px]">신청은 바로 확정돼요. 수강생이 취소를 요청하면 &lsquo;취소 요청&rsquo;에 모이고, 승인해야 취소돼요.</p>
 
       <div className="mt-5 flex gap-1.5 overflow-x-auto pb-1">
         {STATUS_FILTERS.map((f) => (
@@ -48,7 +46,7 @@ export default async function AdminEnrollments({ searchParams }: PageProps<"/adm
           <option value="">모든 강좌</option>
           {(courses ?? []).map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
         </select>
-        <input name="q" defaultValue={q} className="input h-11" placeholder="이름 또는 휴대폰 번호" aria-label="검색" />
+        <input name="q" defaultValue={q} className="input h-11" placeholder="이름, 지점, 휴대폰 번호" aria-label="검색" />
         <button className="btn-primary h-11">찾기</button>
       </form>
 
@@ -58,21 +56,7 @@ export default async function AdminEnrollments({ searchParams }: PageProps<"/adm
       ) : (
         <ul className="divide-y divide-line border-y border-line">
           {rows.map((e) => (
-            <li key={e.id} className="py-4 flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <EnrollmentStatusChip s={e.status} />
-                  <span className="font-bold">{e.applicant_name}</span>
-                  <a href={`tel:${e.applicant_phone}`} className="text-[14px] text-blue">{e.applicant_phone.replace(/(\d{3})(\d{3,4})(\d{4})/, "$1-$2-$3")}</a>
-                </div>
-                <Link href={`/manage/courses/${e.course?.id}`} className="block text-[14px] text-ink-2 mt-1 hover:text-blue">
-                  {e.course?.title}{e.session ? ` · ${e.session.label}` : ""}
-                </Link>
-                <p className="text-[13px] text-muted">{formatDateTime(e.created_at)} 신청</p>
-                {e.message && <p className="text-[14px] text-ink-2 mt-1 whitespace-pre-line">{e.message}</p>}
-              </div>
-              <EnrollmentActions id={e.id} status={e.status} />
-            </li>
+            <EnrollmentItem key={e.id} e={e} courseTitle={e.course?.title ?? null} courseId={e.course?.id} sessionLabel={e.session?.label} />
           ))}
         </ul>
       )}

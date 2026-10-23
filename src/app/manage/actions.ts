@@ -56,6 +56,8 @@ export async function saveCourse(_prev: ActionState, form: FormData): Promise<Ac
     format: str(form, "format") || "offline",
     location: strOrNull(form, "location"),
     price: priceRaw === "" ? null : Number(priceRaw),
+    internal_only: form.get("internal_only") === "on",
+    cancel_deadline_days: Math.min(60, Math.max(0, Number(str(form, "cancel_deadline_days") || 7) || 0)),
     ...(thumbnail_url ? { thumbnail_url } : {}),
   };
 
@@ -118,6 +120,7 @@ export async function saveSession(_prev: ActionState, form: FormData): Promise<A
     schedule_text: strOrNull(form, "schedule_text"),
     location: strOrNull(form, "location"),
     capacity: capacityRaw ? Number(capacityRaw) : null,
+    apply_deadline: strOrNull(form, "apply_deadline"),
     status: str(form, "status") || "open",
   };
   if (!fields.label) return { error: "회차 이름을 입력해 주세요. 예: 12기" };
@@ -148,8 +151,24 @@ export async function setEnrollmentStatus(_prev: ActionState, form: FormData): P
     .eq("id", str(form, "id"));
   if (error) return { error: dbError(error.message) };
   revalidatePath("/manage", "layout");
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   return { ok: "처리했어요." };
+}
+
+/** 수강생 취소 요청 처리: approve → 취소, reject → 요청 거절(확정 유지) */
+export async function resolveCancel(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const supabase = await createClient();
+  const id = str(form, "id");
+  const approve = str(form, "decision") === "approve";
+  const { error } = await supabase
+    .from("enrollments")
+    .update(approve ? { status: "canceled" } : { cancel_requested_at: null, cancel_reason: null })
+    .eq("id", id)
+    .eq("status", "approved");
+  if (error) return { error: dbError(error.message) };
+  revalidatePath("/manage", "layout");
+  revalidatePath("/admin", "layout");
+  return { ok: approve ? "취소했어요." : "취소 요청을 거절했어요." };
 }
 
 export async function reviewInstructor(form: FormData) {

@@ -6,10 +6,10 @@ import { LineupEditor } from "@/components/lineup-editor";
 import { GalleryEditor } from "@/components/gallery-editor";
 import { CourseForm } from "@/components/course-form";
 import { SessionForm, SessionEditToggle } from "@/components/session-form";
-import { EnrollmentActions } from "@/components/enrollment-actions";
-import { CourseStatusChip, EnrollmentStatusChip } from "@/components/status-chip";
+import { EnrollmentItem } from "@/components/enrollment-item";
+import { CourseStatusChip } from "@/components/status-chip";
 import { deleteSession, setCourseStatus } from "../../actions";
-import { formatDateTime, formatRange } from "@/lib/format";
+import { formatDate, formatRange } from "@/lib/format";
 
 export default async function ManageCoursePage({ params, searchParams }: PageProps<"/manage/courses/[id]">) {
   const { id } = await params;
@@ -30,7 +30,7 @@ export default async function ManageCoursePage({ params, searchParams }: PagePro
     ["photos", "사진"],
   ];
   const active = TABS.some(([k]) => k === tab) ? (tab as string) : "enrollments";
-  const waiting = enrollments.filter((e) => e.status === "requested").length;
+  const waiting = enrollments.filter((e) => e.status === "approved" && e.cancel_requested_at).length;
 
   return (
     <div className="mx-auto max-w-[880px] px-4 sm:px-6 pt-8">
@@ -98,7 +98,7 @@ export default async function ManageCoursePage({ params, searchParams }: PagePro
       )}
 
       <nav className="mt-8 flex gap-1 border-b border-line overflow-x-auto">
-        {TABS.map(([key, base]) => [key, key === "enrollments" && waiting ? `${base} (${waiting})` : base]).map(([key, label]) => (
+        {TABS.map(([key, base]) => [key, key === "enrollments" && waiting ? `${base} (취소 요청 ${waiting})` : base]).map(([key, label]) => (
           <Link
             key={key}
             href={`?tab=${key}`}
@@ -118,20 +118,7 @@ export default async function ManageCoursePage({ params, searchParams }: PagePro
           ) : (
             <ul className="divide-y divide-line">
               {enrollments.map((e) => (
-                <li key={e.id} className="py-4 flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <EnrollmentStatusChip s={e.status} />
-                      <span className="font-bold">{e.applicant_name}</span>
-                      <a href={`tel:${e.applicant_phone}`} className="text-[14px] text-blue">{e.applicant_phone.replace(/(\d{3})(\d{3,4})(\d{4})/, "$1-$2-$3")}</a>
-                    </div>
-                    <p className="text-[13px] text-muted mt-1">
-                      {[e.session_id ? sessionLabel.get(e.session_id) : null, `${formatDateTime(e.created_at)} 신청`].filter(Boolean).join(" · ")}
-                    </p>
-                    {e.message && <p className="text-[14px] text-ink-2 mt-1.5 whitespace-pre-line">{e.message}</p>}
-                  </div>
-                  <EnrollmentActions id={e.id} status={e.status} />
-                </li>
+                <EnrollmentItem key={e.id} e={e} sessionLabel={e.session_id ? sessionLabel.get(e.session_id) : null} />
               ))}
             </ul>
           )
@@ -142,7 +129,7 @@ export default async function ManageCoursePage({ params, searchParams }: PagePro
             {sessions.length > 0 && (
               <ul className="divide-y divide-line border-y border-line">
                 {sessions.map((s) => {
-                  const taken = enrollments.filter((e) => e.session_id === s.id && (e.status === "approved" || e.status === "completed")).length;
+                  const taken = enrollments.filter((e) => e.session_id === s.id && e.status !== "canceled").length;
                   return (
                     <li key={s.id} className="py-4 flex flex-wrap items-center justify-between gap-2">
                       <div>
@@ -151,7 +138,7 @@ export default async function ManageCoursePage({ params, searchParams }: PagePro
                           {s.status !== "open" && <span className="chip-gray ml-1">{s.status === "closed" ? "마감" : "취소"}</span>}
                         </p>
                         <p className="text-[14px] text-sub">
-                          {[formatRange(s.starts_on, s.ends_on), s.schedule_text, s.location, `확정 ${taken}${s.capacity ? `/${s.capacity}` : ""}명`].filter(Boolean).join(" · ")}
+                          {[formatRange(s.starts_on, s.ends_on), s.schedule_text, s.location, s.apply_deadline ? `${formatDate(s.apply_deadline)}까지 신청` : null, `확정 ${taken}${s.capacity ? `/${s.capacity}` : ""}명`].filter(Boolean).join(" · ")}
                         </p>
                       </div>
                       <div className="flex gap-1.5 flex-wrap justify-end">

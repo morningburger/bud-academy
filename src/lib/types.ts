@@ -2,6 +2,7 @@ export type CourseTrack = "level" | "guest" | "brand" | "leadership" | "trend" |
 export type CourseFormat = "offline" | "online" | "hybrid";
 export type CourseStatus = "draft" | "pending_review" | "published" | "rejected" | "closed";
 export type InstructorStatus = "pending" | "approved" | "rejected" | "suspended";
+export type OrgType = "gohair" | "external";
 export type EnrollmentStatus = "requested" | "approved" | "canceled" | "completed";
 
 export interface Instructor {
@@ -41,6 +42,8 @@ export interface Course {
   gallery: string[];
   schedule_summary: string | null;
   sort_order: number;
+  internal_only: boolean;
+  cancel_deadline_days: number;
   status: CourseStatus;
   review_note: string | null;
   published_at: string | null;
@@ -57,6 +60,7 @@ export interface CourseSession {
   schedule_text: string | null;
   location: string | null;
   capacity: number | null;
+  apply_deadline: string | null;
   status: "open" | "closed" | "canceled";
 }
 
@@ -69,6 +73,12 @@ export interface Enrollment {
   applicant_name: string;
   applicant_phone: string;
   message: string | null;
+  applicant_org_type: OrgType | null;
+  applicant_branch: string | null;
+  applicant_job_title: string | null;
+  cancel_requested_at: string | null;
+  cancel_reason: string | null;
+  canceled_at: string | null;
   access_expires_at: string | null;
   approved_at: string | null;
   created_at: string;
@@ -86,3 +96,13 @@ export interface LineupEntry {
 }
 
 export type CourseWithInstructor = Course & { instructor: Instructor | null; lineup?: LineupEntry[] };
+
+export interface Notice {
+  id: string;
+  title: string;
+  body: string;
+  is_pinned: boolean;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}

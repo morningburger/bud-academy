@@ -9,7 +9,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const viewer = await requireAdmin();
   const supabase = await createClient();
   const [{ count: requests }, { count: pendingInstructors }, { count: pendingCourses }] = await Promise.all([
-    supabase.from("enrollments").select("id", { count: "exact", head: true }).eq("status", "requested"),
+    supabase.from("enrollments").select("id", { count: "exact", head: true }).eq("status", "approved").not("cancel_requested_at", "is", null),
     supabase.from("instructors").select("id", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("courses").select("id", { count: "exact", head: true }).eq("status", "pending_review"),
   ]);

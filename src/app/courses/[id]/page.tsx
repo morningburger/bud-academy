@@ -6,7 +6,9 @@ import { getViewer } from "@/lib/auth";
 import { CourseThumb } from "@/components/course-card";
 import { SellerBadge } from "@/components/badges";
 import { Avatar } from "@/components/avatar";
-import { ENROLLMENT_STATUS_LABEL, FORMAT_LABEL, TRACK_LABEL, formatPrice, formatRange } from "@/lib/format";
+import { ENROLLMENT_STATUS_LABEL, FORMAT_LABEL, TRACK_LABEL, affiliationLine, applyOpen, cancelLastDay, cancelWindowOpen, formatDate, formatPrice, formatRange } from "@/lib/format";
+import { CancelPolicy } from "@/components/cancel-policy";
+import { CancelRequest } from "@/components/cancel-request";
 import { createClient } from "@/lib/supabase/server";
 import type { EnrollmentStatus } from "@/lib/types";
 import { ApplyForm } from "./apply-form";
@@ -19,6 +21,11 @@ export async function generateMetadata({ params }: PageProps<"/courses/[id]">): 
 
 const STEP_TRACKS = new Set(["guest", "brand", "leadership"]);
 
+/** 여러 날에 걸친 회차가 있으면 다회차 규정 안내 */
+function nextOpenIsMulti(sessions: { starts_on: string | null; ends_on: string | null }[]) {
+  return sessions.some((s) => s.starts_on && s.ends_on && s.ends_on !== s.starts_on);
+}
+
 export default async function CoursePage({ params }: PageProps<"/courses/[id]">) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
@@ -26,13 +33,13 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
   if (!course) notFound();
   const sessions = await listSessions(id);
 
-  type MyEnrollment = { status: EnrollmentStatus; session_id: string | null };
+  type MyEnrollment = { id: string; status: EnrollmentStatus; session_id: string | null; cancel_requested_at: string | null };
   let myEnrollment: MyEnrollment | null = null;
   if (viewer) {
     const supabase = await createClient();
     const { data } = await supabase
       .from("enrollments")
-      .select("status, session_id")
+      .select("id, status, session_id, cancel_requested_at")
       .eq("course_id", id)
       .eq("user_id", viewer.userId)
       .neq("status", "canceled")
@@ -46,7 +53,11 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
   const instructor = course.instructor;
   const lineup = course.lineup ?? [];
   const openSessions = sessions.filter((s) => s.status === "open");
-  const waitingNextRound = sessions.length > 0 && openSessions.length === 0;
+  const applicableSessions = openSessions.filter((s) => applyOpen(s.apply_deadline));
+  const waitingNextRound = sessions.length > 0 && applicableSessions.length === 0;
+  const mySession = myEnrollment?.session_id ? sessions.find((x) => x.id === myEnrollment!.session_id) : undefined;
+  const myLastDay = cancelLastDay(mySession?.starts_on, course.cancel_deadline_days);
+  const policy = <CancelPolicy days={course.cancel_deadline_days} multiSession={Boolean(nextOpenIsMulti(sessions))} compact />;
   const numbered = STEP_TRACKS.has(course.track);
   const nextOpen = openSessions[0];
 
@@ -176,8 +187,11 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
                         <p className="text-[14px] text-sub">
                           {[formatRange(s.starts_on, s.ends_on), s.schedule_text, s.location].filter(Boolean).join(" · ")}
                         </p>
+                        {s.status === "open" && s.apply_deadline && applyOpen(s.apply_deadline) && (
+                          <p className="text-[13px] text-blue">{formatDate(s.apply_deadline)}까지 신청</p>
+                        )}
                       </div>
-                      {s.status === "closed" ? (
+                      {s.status === "closed" || (s.status === "open" && !applyOpen(s.apply_deadline)) ? (
                         <span className="chip-gray">마감</span>
                       ) : full ? (
                         <span className="chip-gray">정원 마감</span>
@@ -193,6 +207,13 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
             </section>
           )}
 
+          <section className="mt-12">
+            <h2 className="text-[20px] font-bold mb-3">취소·환불 규정</h2>
+            <div className="rounded-2xl bg-surface p-5">
+              <CancelPolicy days={course.cancel_deadline_days} multiSession={Boolean(nextOpenIsMulti(sessions))} />
+            </div>
+          </section>
+
           {!course.is_official && (
             <p className="mt-8 text-[12px] leading-relaxed text-muted">
               이 강좌의 판매자는 {instructor?.name} 강사이며, 버드아카데미는 통신판매중개자로서 강좌 내용과 진행의 당사자가 아닙니다.
@@ -207,13 +228,23 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
           <div className="mt-5">
             {myEnrollment !== null ? (
               <div className="rounded-2xl bg-blue-weak p-5">
-                <p className="font-bold text-blue mb-1">{ENROLLMENT_STATUS_LABEL[myEnrollment.status]}</p>
+                <p className="font-bold text-blue mb-1">
+                  {myEnrollment.status === "approved" && myEnrollment.cancel_requested_at ? "취소 요청 중" : ENROLLMENT_STATUS_LABEL[myEnrollment.status]}
+                </p>
                 <p className="text-[15px] text-ink-2">
-                  {myEnrollment.status === "requested" && "신청이 접수됐어요. 확인 후 입금 안내를 드려요."}
+                  {myEnrollment.status === "requested" && "신청이 접수됐어요. 담당자가 확인하고 있어요."}
                   {myEnrollment.status === "approved" && "수강이 확정됐어요."}
                   {myEnrollment.status === "completed" && "수료한 강좌예요."}
-                  {myEnrollment.session_id && ` (${sessions.find((s) => s.id === myEnrollment.session_id)?.label ?? ""})`}
+                  {mySession && ` (${mySession.label})`}
                 </p>
+                {myEnrollment.status === "approved" && (
+                  <CancelRequest
+                    id={myEnrollment.id}
+                    requested={Boolean(myEnrollment.cancel_requested_at)}
+                    windowOpen={cancelWindowOpen(mySession?.starts_on, course.cancel_deadline_days)}
+                    lastDayText={myLastDay ? formatDate(myLastDay) : null}
+                  />
+                )}
                 <Link href="/me" className="btn-primary w-full mt-4">내 강의실에서 보기</Link>
               </div>
             ) : waitingNextRound && course.status === "published" ? (
@@ -225,15 +256,23 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
               <ApplyForm
                 courseId={course.id}
                 signedIn={Boolean(viewer)}
-                defaultName={viewer?.name ?? ""}
-                defaultPhone={viewer?.phone ?? ""}
+                profileComplete={Boolean(viewer?.profileComplete)}
+                applicant={viewer?.profileComplete ? { name: viewer.name!, phone: viewer.phone!, line: affiliationLine(viewer.orgType, viewer.branch, viewer.jobTitle) } : null}
+                blockedReason={course.internal_only && viewer?.orgType === "external" ? "고정현헤어 소속 인턴만 신청할 수 있는 과정이에요." : null}
                 closed={course.status !== "published"}
-                sessions={openSessions.map((s) => ({
-                  id: s.id,
-                  label: s.label,
-                  detail: [formatRange(s.starts_on, s.ends_on), s.schedule_text].filter(Boolean).join(" · ") || null,
-                  full: s.capacity !== null && s.taken >= s.capacity,
-                }))}
+                policy={policy}
+                sessions={openSessions.map((s) => {
+                  const full = s.capacity !== null && s.taken >= s.capacity;
+                  return {
+                    id: s.id,
+                    label: s.label,
+                    detail: [formatRange(s.starts_on, s.ends_on), s.schedule_text].filter(Boolean).join(" · ") || null,
+                    full,
+                    deadlinePassed: !applyOpen(s.apply_deadline),
+                    deadlineText: s.apply_deadline ? `${formatDate(s.apply_deadline)}까지 신청` : null,
+                    seatsLeft: s.capacity !== null ? Math.max(0, s.capacity - s.taken) : null,
+                  };
+                })}
               />
             )}
           </div>

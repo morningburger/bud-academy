@@ -13,12 +13,12 @@ export default async function AdminCourses() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("courses")
-    .select("*, instructor:instructors!courses_instructor_id_fkey(name), sessions:course_sessions(status), enrollments(status)")
+    .select("*, instructor:instructors!courses_instructor_id_fkey(name), sessions:course_sessions(status), enrollments(status, cancel_requested_at)")
     .order("sort_order");
   const courses = (data ?? []) as (Course & {
     instructor: { name: string } | null;
     sessions: { status: string }[];
-    enrollments: { status: string }[];
+    enrollments: { status: string; cancel_requested_at: string | null }[];
   })[];
   const sorted = [...courses].sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.sort_order - b.sort_order);
 
@@ -33,8 +33,8 @@ export default async function AdminCourses() {
       <ul className="mt-6 flex flex-col gap-2">
         {sorted.map((c) => {
           const open = c.sessions.filter((s) => s.status === "open").length;
-          const waiting = c.enrollments.filter((e) => e.status === "requested").length;
-          const confirmed = c.enrollments.filter((e) => e.status === "approved").length;
+          const waiting = c.enrollments.filter((e) => e.status === "approved" && e.cancel_requested_at).length;
+          const confirmed = c.enrollments.filter((e) => e.status === "approved" || e.status === "completed").length;
           return (
             <li key={c.id}>
               <Link href={`/manage/courses/${c.id}`} className="panel flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5 hover:bg-[#fafbfc]">
@@ -51,7 +51,7 @@ export default async function AdminCourses() {
                 </div>
                 <div className="flex items-center gap-4 text-[14px]">
                   <span className={open ? "text-ink" : "text-muted"}>모집 중 회차 {open}</span>
-                  {waiting > 0 && <span className="font-bold text-orange">새 신청 {waiting}</span>}
+                  {waiting > 0 && <span className="font-bold text-orange">취소 요청 {waiting}</span>}
                   <span className="text-sub">확정 {confirmed}</span>
                   <span className="text-sub w-20 text-right">{formatPrice(c.price)}</span>
                 </div>

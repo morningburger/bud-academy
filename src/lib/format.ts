@@ -1,4 +1,4 @@
-import type { CourseTrack, CourseFormat, CourseStatus, EnrollmentStatus, InstructorStatus } from "./types";
+import type { CourseTrack, CourseFormat, CourseStatus, EnrollmentStatus, InstructorStatus, OrgType } from "./types";
 
 export const TRACK_LABEL: Record<CourseTrack, string> = {
   level: "단계별 과정",
@@ -61,4 +61,40 @@ export function formatDateTime(d: string) {
   return new Intl.DateTimeFormat("ko-KR", {
     month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Seoul",
   }).format(new Date(d));
+}
+
+export const JOB_TITLES = ["인턴", "디자이너", "팀장", "실장", "점장", "부원장", "원장", "대표", "본사 직원", "기타"];
+
+export const ORG_LABEL: Record<OrgType, string> = { gohair: "고정현헤어", external: "다른 살롱" };
+
+/** 예: (부평점) 인턴 · 고정현헤어 / (OO살롱) 디자이너 */
+export function affiliationLine(org: OrgType | null | undefined, branch: string | null | undefined, title: string | null | undefined) {
+  if (!org && !branch && !title) return null;
+  const where = branch ? (org === "external" ? branch : `고정현헤어 ${branch}`) : org ? ORG_LABEL[org] : "";
+  return [where, title].filter(Boolean).join(" · ");
+}
+
+/** 한국 날짜 YYYY-MM-DD */
+export function todayKST() {
+  return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+}
+
+export function addDays(ymd: string, days: number) {
+  const d = new Date(ymd + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** 취소 요청 마지막 날 (수업일 - N일). 수업일이 없으면 null = 언제든 요청 가능 */
+export function cancelLastDay(startsOn: string | null | undefined, deadlineDays: number) {
+  return startsOn ? addDays(startsOn, -deadlineDays) : null;
+}
+
+export function cancelWindowOpen(startsOn: string | null | undefined, deadlineDays: number) {
+  const last = cancelLastDay(startsOn, deadlineDays);
+  return last === null || todayKST() <= last;
+}
+
+export function applyOpen(applyDeadline: string | null | undefined) {
+  return !applyDeadline || todayKST() <= applyDeadline;
 }

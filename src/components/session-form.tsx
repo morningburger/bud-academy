@@ -23,12 +23,16 @@ export function SessionForm({ courseId, session, onDone }: { courseId: string; s
         <input name="capacity" className="input" inputMode="numeric" defaultValue={session?.capacity ?? ""} />
       </div>
       <div>
-        <label className="field-label">시작일</label>
+        <label className="field-label">시작일 (취소 마감 계산 기준)</label>
         <input name="starts_on" type="date" className="input" defaultValue={session?.starts_on ?? ""} />
       </div>
       <div>
         <label className="field-label">종료일</label>
         <input name="ends_on" type="date" className="input" defaultValue={session?.ends_on ?? ""} />
+      </div>
+      <div>
+        <label className="field-label">신청 마감일 (비우면 모집 마감 전까지)</label>
+        <input name="apply_deadline" type="date" className="input" defaultValue={session?.apply_deadline ?? ""} />
       </div>
       <div>
         <label className="field-label">시간 안내</label>

@@ -13,6 +13,7 @@ export async function SiteHeader() {
         <nav className="hidden sm:flex items-center gap-5 text-[15px] text-sub">
           <Link href="/courses" className="hover:text-ink">강좌</Link>
           <Link href="/instructors" className="hover:text-ink">강사</Link>
+          <Link href="/notices" className="hover:text-ink">공지사항</Link>
           <Link href="/partner" className="hover:text-ink">강사로 참여하기</Link>
         </nav>
         <div className="ml-auto flex items-center gap-2">
@@ -30,6 +31,7 @@ export async function SiteHeader() {
       <nav className="sm:hidden mx-auto max-w-[1040px] px-4 h-11 flex items-center gap-5 text-[15px] text-sub overflow-x-auto">
         <Link href="/courses">강좌</Link>
         <Link href="/instructors">강사</Link>
+        <Link href="/notices">공지사항</Link>
         <Link href="/partner" className="whitespace-nowrap">강사로 참여하기</Link>
       </nav>
     </header>

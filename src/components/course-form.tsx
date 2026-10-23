@@ -89,6 +89,17 @@ export function CourseForm({
         <label className="field-label" htmlFor="eligibility">수강 자격 (선택)</label>
         <input id="eligibility" name="eligibility" className="input" defaultValue={course?.eligibility ?? ""} placeholder="예: 고정현헤어 소속 인턴만 수강할 수 있어요." />
       </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="field-label" htmlFor="cancel_deadline_days">취소 마감 (수업 며칠 전까지)</label>
+          <input id="cancel_deadline_days" name="cancel_deadline_days" type="number" min={0} max={60} className="input" defaultValue={course?.cancel_deadline_days ?? 7} />
+          <p className="mt-1 text-[12px] text-muted">기본 7일 전. 회차에 시작일이 있어야 자동으로 막혀요.</p>
+        </div>
+        <label className="flex items-center gap-2 rounded-xl border border-line px-4 h-12 sm:mt-[26px] text-[15px] cursor-pointer">
+          <input type="checkbox" name="internal_only" defaultChecked={course?.internal_only ?? false} className="accent-[#3182f6] size-4" />
+          고정현헤어 소속만 신청 가능
+        </label>
+      </div>
       <div>
         <label className="field-label" htmlFor="location">장소</label>
         <input id="location" name="location" className="input" defaultValue={course?.location ?? ""} placeholder="예: 고정현헤어 아카데미룸 (회차마다 다르면 비워두세요)" />

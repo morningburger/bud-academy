@@ -1,5 +1,5 @@
 import { createClient } from "./supabase/server";
-import type { CourseSession, CourseWithInstructor, Instructor } from "./types";
+import type { CourseSession, CourseWithInstructor, Instructor, Notice } from "./types";
 
 const COURSE_SELECT =
   "*, instructor:instructors!courses_instructor_id_fkey(*), lineup:course_instructors(role, position, instructor:instructors(id, name, headline, photo_url, affiliation, branch_name))";
@@ -100,4 +100,22 @@ export async function getInstructor(id: string) {
     instructor: instructor as Instructor | null,
     courses: [...all.values()].sort((a, b) => a.sort_order - b.sort_order),
   };
+}
+
+export async function listBranches() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("branches").select("name").eq("active", true).order("sort_order").order("name");
+  return (data ?? []).map((b) => b.name as string);
+}
+
+export async function listNotices(limit = 50) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("notices")
+    .select("*")
+    .eq("is_published", true)
+    .order("is_pinned", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as Notice[];
 }

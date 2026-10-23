@@ -14,10 +14,10 @@ export default async function StudioPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("courses")
-    .select("*, enrollments(status)")
+    .select("*, enrollments(status, cancel_requested_at)")
     .eq("instructor_id", me.id)
     .order("created_at", { ascending: false });
-  const courses = (data ?? []) as (Course & { enrollments: { status: string }[] })[];
+  const courses = (data ?? []) as (Course & { enrollments: { status: string; cancel_requested_at: string | null }[] })[];
   const approved = me.status === "approved";
 
   return (
@@ -57,7 +57,7 @@ export default async function StudioPage() {
           ) : (
             <ul className="flex flex-col gap-2">
               {courses.map((c) => {
-                const waiting = c.enrollments.filter((e) => e.status === "requested").length;
+                const waiting = c.enrollments.filter((e) => e.status === "approved" && e.cancel_requested_at).length;
                 const confirmed = c.enrollments.filter((e) => e.status === "approved" || e.status === "completed").length;
                 return (
                   <li key={c.id}>
@@ -67,7 +67,7 @@ export default async function StudioPage() {
                         <p className="mt-1.5 font-bold truncate">{c.title}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        {waiting > 0 && <p className="text-[14px] font-bold text-orange">새 신청 {waiting}</p>}
+                        {waiting > 0 && <p className="text-[14px] font-bold text-orange">취소 요청 {waiting}</p>}
                         <p className="text-[13px] text-muted">확정 {confirmed}명</p>
                       </div>
                     </Link>

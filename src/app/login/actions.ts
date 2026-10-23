@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { profileFormError, readProfileForm } from "@/lib/profile-form";
 
 export type AuthState = { error?: string; info?: string } | null;
 
@@ -25,11 +26,11 @@ export async function signIn(_prev: AuthState, form: FormData): Promise<AuthStat
 }
 
 export async function signUp(_prev: AuthState, form: FormData): Promise<AuthState> {
-  const name = String(form.get("name") ?? "").trim();
-  const phone = String(form.get("phone") ?? "").replace(/[^0-9]/g, "");
+  const profile = readProfileForm(form);
   const email = String(form.get("email") ?? "").trim();
   const password = String(form.get("password") ?? "");
-  if (!name) return { error: "이름을 입력해 주세요." };
+  const profileError = profileFormError(profile);
+  if (profileError) return { error: profileError };
   if (password.length < 8) return { error: "비밀번호는 8자 이상으로 정해 주세요." };
   if (form.get("agree") !== "on") return { error: "이용약관과 개인정보 수집·이용에 동의해 주세요." };
 
@@ -41,7 +42,7 @@ export async function signUp(_prev: AuthState, form: FormData): Promise<AuthStat
     email,
     password,
     options: {
-      data: { name, phone },
+      data: { ...profile, marketing_agreed: form.get("marketing") === "on" ? "true" : "false" },
       emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
     },
   });

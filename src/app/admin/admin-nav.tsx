@@ -9,6 +9,7 @@ const ITEMS = [
   { href: "/admin/courses", label: "강좌·회차" },
   { href: "/admin/instructors", label: "강사" },
   { href: "/admin/members", label: "회원" },
+  { href: "/admin/notices", label: "공지사항" },
   { href: "/admin/staff", label: "운영진" },
 ];
 
