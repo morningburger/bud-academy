@@ -1,4 +1,4 @@
-export type CourseTrack = "level" | "guest" | "brand" | "leadership" | "trend" | "etc";
+export type CourseTrack = "level" | "guest" | "brand" | "leadership" | "trend" | "special" | "etc";
 export type CourseFormat = "offline" | "online" | "hybrid";
 export type CourseStatus = "draft" | "pending_review" | "published" | "rejected" | "closed";
 export type InstructorStatus = "pending" | "approved" | "rejected" | "suspended";
@@ -42,6 +42,8 @@ export interface Course {
   materials: string[];
   eligibility: string | null;
   price_note: string | null;
+  extra_fee: number | null;
+  extra_fee_label: string | null;
   gallery: string[];
   schedule_summary: string | null;
   sort_order: number;
@@ -98,7 +100,9 @@ export interface LineupEntry {
   instructor: Pick<Instructor, "id" | "name" | "headline" | "photo_url" | "affiliation" | "branch_name"> | null;
 }
 
-export type CourseWithInstructor = Course & { instructor: Instructor | null; lineup?: LineupEntry[] };
+export type SessionBrief = Pick<CourseSession, "id" | "status" | "apply_deadline" | "starts_on">;
+
+export type CourseWithInstructor = Course & { instructor: Instructor | null; lineup?: LineupEntry[]; sessions?: SessionBrief[] };
 
 export interface Notice {
   id: string;

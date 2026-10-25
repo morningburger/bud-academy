@@ -58,7 +58,7 @@ export function CourseForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="field-label" htmlFor="price">수강료 (원, 비우면 가격 문의)</label>
+          <label className="field-label" htmlFor="price">교육비 (원, 비우면 교육비 문의)</label>
           <input id="price" name="price" className="input" inputMode="numeric" defaultValue={course?.price ?? ""} />
         </div>
         <div>
@@ -68,8 +68,8 @@ export function CourseForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="field-label" htmlFor="price_note">수강료 메모</label>
-          <input id="price_note" name="price_note" className="input" defaultValue={course?.price_note ?? ""} placeholder="예: 교재비 8만원 별도" />
+          <label className="field-label" htmlFor="price_note">교육비 기준</label>
+          <input id="price_note" name="price_note" className="input" defaultValue={course?.price_note ?? ""} placeholder="예: 4회 전체 / 회차당" />
         </div>
         <div>
           <label className="field-label" htmlFor="level">단계 (단계별 과정만)</label>
@@ -80,6 +80,17 @@ export function CourseForm({
             <option value="3">LV3</option>
           </select>
         </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="field-label" htmlFor="extra_fee_label">필수 추가비용 이름</label>
+          <input id="extra_fee_label" name="extra_fee_label" className="input" defaultValue={course?.extra_fee_label ?? ""} placeholder="예: 교재비" />
+        </div>
+        <div>
+          <label className="field-label" htmlFor="extra_fee">필수 추가비용 (원)</label>
+          <input id="extra_fee" name="extra_fee" className="input" inputMode="numeric" defaultValue={course?.extra_fee ?? ""} placeholder="없으면 비워 두세요" />
+        </div>
+        <p className="col-span-2 -mt-1 text-[12px] text-muted">추가비용을 넣으면 모든 화면에 ‘총 금액’과 내역이 함께 표시돼요. 사내 전용 강좌의 교육비는 고정현헤어 회원에게만 보여요.</p>
       </div>
       <div>
         <label className="field-label" htmlFor="schedule_summary">일정 요약</label>

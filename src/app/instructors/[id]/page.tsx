@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getInstructor } from "@/lib/queries";
+import { getViewer } from "@/lib/auth";
 import { Portrait } from "@/components/avatar";
 import { SellerBadge } from "@/components/badges";
 import { CourseCard } from "@/components/course-card";
@@ -8,7 +9,7 @@ import { TEAM_LABEL } from "@/lib/format";
 export default async function InstructorPage({ params }: PageProps<"/instructors/[id]">) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const { instructor, courses } = await getInstructor(id);
+  const [{ instructor, courses }, viewer] = await Promise.all([getInstructor(id), getViewer()]);
   if (!instructor) notFound();
   const insta = instructor.instagram?.replace(/^@/, "");
 
@@ -39,12 +40,12 @@ export default async function InstructorPage({ params }: PageProps<"/instructors
           )}
         </div>
       )}
-      <h2 className="mt-12 mb-5 text-[20px] font-bold">진행 중인 강좌</h2>
+      <h2 className="mt-12 mb-5 text-[20px] font-bold">버드아카데미 강의</h2>
       {courses.length === 0 ? (
         <p className="text-sub">공개된 강좌가 아직 없어요.</p>
       ) : (
         <div className="grid gap-x-5 gap-y-9 grid-cols-2 lg:grid-cols-4">
-          {courses.map((c) => <CourseCard key={c.id} course={{ ...c, instructor }} />)}
+          {courses.map((c) => <CourseCard key={c.id} course={{ ...c, instructor }} viewer={viewer} />)}
         </div>
       )}
     </div>

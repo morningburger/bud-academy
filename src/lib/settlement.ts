@@ -29,7 +29,7 @@ export async function loadSettlement(month: string, paidOnly: boolean, courseId?
   const supabase = await createClient();
   let q = supabase
     .from("enrollments")
-    .select("id, status, created_at, applicant_name, applicant_phone, applicant_org_type, applicant_branch, applicant_job_title, course:courses(id, title, price, price_note), session:course_sessions(label, starts_on)")
+    .select("id, status, created_at, applicant_name, applicant_phone, applicant_org_type, applicant_branch, applicant_job_title, course:courses(id, title, price, price_note, extra_fee, extra_fee_label), session:course_sessions(label, starts_on)")
     .in("status", ["approved", "completed"])
     .gte("created_at", new Date(new Date(start).getTime() - 120 * 864e5).toISOString())
     .lt("created_at", new Date(new Date(next).getTime() + 1 * 864e5).toISOString())
@@ -39,7 +39,7 @@ export async function loadSettlement(month: string, paidOnly: boolean, courseId?
   type Raw = {
     id: string; status: EnrollmentStatus; created_at: string; applicant_name: string; applicant_phone: string;
     applicant_org_type: OrgType | null; applicant_branch: string | null; applicant_job_title: string | null;
-    course: { id: string; title: string; price: number | null; price_note: string | null } | null;
+    course: { id: string; title: string; price: number | null; price_note: string | null; extra_fee: number | null; extra_fee_label: string | null } | null;
     session: { label: string; starts_on: string | null } | null;
   };
   const rows: SettlementRow[] = ((data ?? []) as unknown as Raw[])
@@ -56,8 +56,9 @@ export async function loadSettlement(month: string, paidOnly: boolean, courseId?
         phone: e.applicant_phone,
         course: e.course?.title ?? "",
         session: e.session?.label ?? "",
-        price: e.course?.price ?? null,
-        priceNote: e.course?.price_note ?? "",
+        // 정산 금액 = 교육비 + 필수 추가비용(교재비 등)
+        price: e.course?.price == null ? null : e.course.price + (e.course.extra_fee ?? 0),
+        priceNote: [e.course?.price_note, e.course?.extra_fee ? `${e.course.extra_fee_label ?? "추가비용"} ${e.course.extra_fee.toLocaleString("ko-KR")}원 포함` : null].filter(Boolean).join(" · "),
         status: e.status,
         appliedAt: kstDate(e.created_at),
       };

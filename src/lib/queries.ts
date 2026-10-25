@@ -2,7 +2,7 @@ import { createClient } from "./supabase/server";
 import type { CourseSession, CourseWithInstructor, Instructor, Notice } from "./types";
 
 const COURSE_SELECT =
-  "*, instructor:instructors!courses_instructor_id_fkey(*), lineup:course_instructors(role, position, instructor:instructors(id, name, headline, photo_url, affiliation, branch_name))";
+  "*, instructor:instructors!courses_instructor_id_fkey(*), lineup:course_instructors(role, position, instructor:instructors(id, name, headline, photo_url, affiliation, branch_name)), sessions:course_sessions(id, status, apply_deadline, starts_on)";
 
 function sortLineup<T extends CourseWithInstructor>(c: T): T {
   return { ...c, lineup: [...(c.lineup ?? [])].filter((l) => l.instructor).sort((a, b) => a.position - b.position) };
@@ -52,7 +52,7 @@ export async function listUpcomingSessions(limit = 6) {
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
   const { data } = await supabase
     .from("course_sessions")
-    .select("*, course:courses!inner(id, title, track, is_official, format, status, thumbnail_url, price)")
+    .select("*, course:courses!inner(id, title, track, is_official, format, status, thumbnail_url, price, price_note, extra_fee, extra_fee_label, internal_only)")
     .eq("status", "open")
     .eq("course.status", "published")
     .gte("starts_on", today)
@@ -60,7 +60,8 @@ export async function listUpcomingSessions(limit = 6) {
     .limit(limit);
   return (data ?? []) as (CourseSession & {
     course: { id: string; title: string; track: string; is_official: boolean; format: string;
-      thumbnail_url: string | null; price: number | null };
+      thumbnail_url: string | null; price: number | null; price_note: string | null;
+      extra_fee: number | null; extra_fee_label: string | null; internal_only: boolean };
   })[];
 }
 

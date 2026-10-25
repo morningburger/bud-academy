@@ -9,7 +9,7 @@ const STEPS = [
   { title: "입점 신청", body: "강사 소개와 경력, 열고 싶은 강좌를 적어 보내주세요." },
   { title: "심사", body: "버드아카데미 교육팀이 경력과 강좌 계획을 검토하고 연락드려요." },
   { title: "강좌 개설", body: "승인되면 강사 스튜디오에서 강좌와 일정을 직접 등록해요. 공개 전 한 번 더 검수합니다." },
-  { title: "수강생 관리", body: "신청이 들어오면 스튜디오에서 바로 확인하고 수강을 확정할 수 있어요." },
+  { title: "수강생 관리", body: "수강생이 신청하면 바로 확정되고, 신청자 명단과 취소 요청은 스튜디오에서 바로 확인할 수 있어요." },
 ];
 
 export default async function PartnerPage() {
@@ -41,7 +41,7 @@ export default async function PartnerPage() {
       </ol>
 
       <div className="mt-4 rounded-2xl bg-surface p-5 text-[14px] text-sub leading-relaxed">
-        수강료 정산과 플랫폼 수수료는 승인 후 개별 안내드려요. 온라인 결제는 준비 중이며, 그 전까지는 계좌 입금으로 신청을 확정합니다.
+        수강료 정산과 플랫폼 수수료는 승인 후 개별 안내드려요.
       </div>
 
       <div className="mt-8">

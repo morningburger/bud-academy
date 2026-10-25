@@ -56,6 +56,8 @@ export async function saveCourse(_prev: ActionState, form: FormData): Promise<Ac
     format: str(form, "format") || "offline",
     location: strOrNull(form, "location"),
     price: priceRaw === "" ? null : Number(priceRaw),
+    extra_fee: str(form, "extra_fee").replace(/[^0-9]/g, "") === "" ? null : Number(str(form, "extra_fee").replace(/[^0-9]/g, "")) || null,
+    extra_fee_label: strOrNull(form, "extra_fee_label"),
     internal_only: form.get("internal_only") === "on",
     cancel_deadline_days: Math.min(60, Math.max(0, Number(str(form, "cancel_deadline_days") || 7) || 0)),
     ...(thumbnail_url ? { thumbnail_url } : {}),

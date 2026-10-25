@@ -1,4 +1,4 @@
-import type { CourseTrack, CourseFormat, CourseStatus, EnrollmentStatus, InstructorStatus, OrgType } from "./types";
+import type { Course, CourseTrack, CourseFormat, CourseStatus, EnrollmentStatus, InstructorStatus, OrgType, SessionBrief } from "./types";
 
 export const TRACK_LABEL: Record<CourseTrack, string> = {
   level: "단계별 과정",
@@ -6,6 +6,7 @@ export const TRACK_LABEL: Record<CourseTrack, string> = {
   brand: "브랜드 교육",
   leadership: "리더십",
   trend: "트렌드",
+  special: "특강",
   etc: "기타",
 };
 
@@ -42,6 +43,42 @@ export function formatPrice(price: number | null) {
   if (price === 0) return "무료";
   return `${price.toLocaleString("ko-KR")}원`;
 }
+
+const won = (n: number) => `${n.toLocaleString("ko-KR")}원`;
+
+type PriceFields = Pick<Course, "price" | "price_note" | "extra_fee" | "extra_fee_label" | "internal_only">;
+
+/** 사내 교육의 교육비는 고정현헤어 회원과 운영진에게만 보여요. */
+export function canSeePrice(course: Pick<Course, "internal_only">, viewer?: { orgType: OrgType | null; isAdmin?: boolean } | null) {
+  return !course.internal_only || viewer?.orgType === "gohair" || Boolean(viewer?.isAdmin);
+}
+
+/** 총 결제금액 = 교육비 + 필수 추가비용 */
+export function coursePrice(course: PriceFields, viewer?: { orgType: OrgType | null; isAdmin?: boolean } | null) {
+  if (!canSeePrice(course, viewer)) return { main: "교육비 문의", detail: null as string | null, hidden: true };
+  if (course.price === null) return { main: "교육비 문의", detail: course.price_note, hidden: false };
+  const total = course.price + (course.extra_fee ?? 0);
+  if (total === 0) return { main: "무료", detail: course.price_note, hidden: false };
+  const breakdown = course.extra_fee ? `교육비 ${won(course.price)} + ${course.extra_fee_label ?? "추가비용"} ${won(course.extra_fee)}` : null;
+  return {
+    main: course.extra_fee ? `총 ${won(total)}` : won(total),
+    detail: [course.price_note, breakdown].filter(Boolean).join(" · ") || null,
+    hidden: false,
+  };
+}
+
+/** 지금 신청할 수 있는 반이 있는 강좌 */
+export function isRecruiting(course: Pick<Course, "status">, sessions: SessionBrief[] | undefined) {
+  if (course.status !== "published") return false;
+  return (sessions ?? []).some((s) => s.status === "open" && applyOpen(s.apply_deadline) && (!s.starts_on || s.starts_on >= todayKST()));
+}
+
+/** 실제 교육장 (사업자 주소와 다름) */
+export const ACADEMY_ADDRESS = "인천광역시 남동구 문화로 141 정현빌딩";
+export const ACADEMY_MAP_LINKS = {
+  naver: `https://map.naver.com/p/search/${encodeURIComponent(ACADEMY_ADDRESS)}`,
+  kakao: `https://map.kakao.com/link/search/${encodeURIComponent(ACADEMY_ADDRESS)}`,
+};
 
 const dateFmt = new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", weekday: "short", timeZone: "Asia/Seoul" });
 

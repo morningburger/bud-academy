@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCourse, listSessions } from "@/lib/queries";
 import { getViewer } from "@/lib/auth";
-import { CourseThumb } from "@/components/course-card";
+import { AudienceBadge, CourseThumb } from "@/components/course-card";
 import { SellerBadge } from "@/components/badges";
 import { Avatar } from "@/components/avatar";
-import { ENROLLMENT_STATUS_LABEL, FORMAT_LABEL, TRACK_LABEL, affiliationLine, applyOpen, cancelLastDay, cancelWindowOpen, formatDate, formatPrice, formatRange } from "@/lib/format";
+import { ACADEMY_ADDRESS, ACADEMY_MAP_LINKS, ENROLLMENT_STATUS_LABEL, FORMAT_LABEL, TRACK_LABEL, affiliationLine, applyOpen, cancelLastDay, cancelWindowOpen, coursePrice, formatDate, formatRange, todayKST } from "@/lib/format";
 import { CancelPolicy } from "@/components/cancel-policy";
 import { CancelRequest } from "@/components/cancel-request";
 import { createClient } from "@/lib/supabase/server";
@@ -16,7 +16,12 @@ import { ApplyForm } from "./apply-form";
 export async function generateMetadata({ params }: PageProps<"/courses/[id]">): Promise<Metadata> {
   const { id } = await params;
   const course = /^[0-9a-f-]{36}$/i.test(id) ? await getCourse(id) : null;
-  return { title: course?.title ?? "강좌", description: course?.summary ?? undefined };
+  if (!course) return { title: "강좌" };
+  return {
+    title: course.title,
+    description: course.summary ?? undefined,
+    openGraph: { title: course.title, description: course.summary ?? undefined, images: course.thumbnail_url ? [course.thumbnail_url] : undefined },
+  };
 }
 
 const STEP_TRACKS = new Set(["guest", "brand", "leadership"]);
@@ -57,15 +62,23 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
   const waitingNextRound = sessions.length > 0 && applicableSessions.length === 0;
   const mySession = myEnrollment?.session_id ? sessions.find((x) => x.id === myEnrollment!.session_id) : undefined;
   const myLastDay = cancelLastDay(mySession?.starts_on, course.cancel_deadline_days);
-  const policy = <CancelPolicy days={course.cancel_deadline_days} multiSession={Boolean(nextOpenIsMulti(sessions))} compact />;
+  const price = coursePrice(course, viewer);
+  const isFree = !price.hidden && price.main === "무료";
+  const policy = <CancelPolicy days={course.cancel_deadline_days} multiSession={Boolean(nextOpenIsMulti(sessions))} free={isFree} compact />;
+  // 일정: 모집 중인 반 먼저, 끝난 반은 접어서
+  const today = todayKST();
+  const isPastSession = (x: (typeof sessions)[number]) =>
+    x.status === "closed" || (x.status === "open" && !applyOpen(x.apply_deadline)) || Boolean(x.ends_on && x.ends_on < today) || Boolean(!x.ends_on && x.starts_on && x.starts_on < today);
+  const currentSessions = sessions.filter((x) => !isPastSession(x));
+  const pastSessions = sessions.filter(isPastSession).reverse();
   const numbered = STEP_TRACKS.has(course.track);
   const nextOpen = openSessions[0];
 
   const facts: { label: string; value: string; sub?: string | null }[] = [
     { label: "일정", value: course.schedule_summary ?? (nextOpen ? formatRange(nextOpen.starts_on, nextOpen.ends_on) ?? "회차별 안내" : "회차별 안내") },
-    { label: "장소", value: course.location ?? (course.format === "online" ? "온라인" : "회차별 안내") },
+    { label: "장소", value: course.location ?? (course.format === "online" ? "온라인" : "회차별 안내"), sub: course.format === "online" ? null : "인천 남동구 문화로 141 정현빌딩" },
     { label: "대상", value: course.audience ?? "누구나" },
-    { label: "수강료", value: formatPrice(course.price), sub: course.price_note },
+    { label: "교육비", value: price.main, sub: price.hidden ? "버드아카데미로 문의해 주세요" : price.detail },
   ];
 
   return (
@@ -80,6 +93,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
           <div className="mt-6 flex flex-wrap items-center gap-1.5">
             {course.level && <span className="chip bg-ink text-white">LV{course.level}</span>}
             <span className="chip-blue">{TRACK_LABEL[course.track]}</span>
+            <AudienceBadge internalOnly={course.internal_only} />
             <SellerBadge isOfficial={course.is_official} instructor={instructor} />
             {course.format !== "offline" && <span className="chip-gray">{FORMAT_LABEL[course.format]}</span>}
           </div>
@@ -177,40 +191,79 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
           {sessions.length > 0 && (
             <section className="mt-12">
               <h2 className="text-[20px] font-bold mb-3">진행 일정</h2>
-              <ul className="divide-y divide-line border-y border-line">
-                {sessions.map((s) => {
-                  const full = s.capacity !== null && s.taken >= s.capacity;
-                  return (
-                    <li key={s.id} className="py-4 flex items-center justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="font-semibold">{s.label}</p>
-                        <p className="text-[14px] text-sub">
-                          {[formatRange(s.starts_on, s.ends_on), s.schedule_text, s.location].filter(Boolean).join(" · ")}
-                        </p>
-                        {s.status === "open" && s.apply_deadline && applyOpen(s.apply_deadline) && (
-                          <p className="text-[13px] text-blue">{formatDate(s.apply_deadline)}까지 신청</p>
+              {currentSessions.length > 0 ? (
+                <ul className="divide-y divide-line border-y border-line">
+                  {currentSessions.map((x) => {
+                    const full = x.capacity !== null && x.taken >= x.capacity;
+                    const when = formatRange(x.starts_on, x.ends_on);
+                    return (
+                      <li key={x.id} className="py-4 flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="font-semibold">{x.label}</p>
+                          <p className="mt-1 text-[14px] text-ink-2">
+                            <span className="text-muted">수업</span>{" "}
+                            {when ? [when, x.schedule_text].filter(Boolean).join(" · ") : <><b className="font-semibold text-orange">수업일 확정 전</b>{x.schedule_text ? ` · ${x.schedule_text}` : ""}</>}
+                          </p>
+                          {x.location && <p className="text-[14px] text-ink-2"><span className="text-muted">장소</span> {x.location}</p>}
+                          {x.apply_deadline && <p className="text-[14px] text-blue"><span className="text-muted">신청 마감</span> {formatDate(x.apply_deadline)}</p>}
+                        </div>
+                        {full ? (
+                          <span className="chip-gray shrink-0">정원 마감</span>
+                        ) : x.capacity ? (
+                          <span className="chip-blue shrink-0">{x.capacity - x.taken}자리 남음</span>
+                        ) : (
+                          <span className="chip-blue shrink-0">모집 중</span>
                         )}
-                      </div>
-                      {s.status === "closed" || (s.status === "open" && !applyOpen(s.apply_deadline)) ? (
-                        <span className="chip-gray">마감</span>
-                      ) : full ? (
-                        <span className="chip-gray">정원 마감</span>
-                      ) : s.capacity ? (
-                        <span className="chip-blue">{s.capacity - s.taken}자리 남음</span>
-                      ) : (
-                        <span className="chip-blue">모집 중</span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="rounded-2xl bg-surface px-5 py-4 text-[15px] text-sub">지금 모집 중인 반이 없어요. 다음 반이 열리면 이곳에 안내해요.</p>
+              )}
+              {currentSessions.some((x) => !x.starts_on) && (
+                <p className="mt-3 text-[13px] text-muted">수업일이 정해지면 이 화면과 내 강의실에 바로 표시돼요.</p>
+              )}
+              {pastSessions.length > 0 && (
+                <details className="mt-4 group">
+                  <summary className="cursor-pointer list-none text-[14px] font-semibold text-sub hover:text-ink">
+                    지난 일정 {pastSessions.length}개 보기 <span aria-hidden className="inline-block transition-transform group-open:rotate-180">⌄</span>
+                  </summary>
+                  <ul className="mt-2 divide-y divide-line border-y border-line">
+                    {pastSessions.map((x) => (
+                      <li key={x.id} className="py-3 flex items-center justify-between gap-4 text-[14px]">
+                        <div className="min-w-0">
+                          <p className="font-medium text-ink-2">{x.label}</p>
+                          <p className="text-muted">{[formatRange(x.starts_on, x.ends_on), x.schedule_text].filter(Boolean).join(" · ")}</p>
+                        </div>
+                        <span className="chip-gray shrink-0">종료</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </section>
+          )}
+
+          {course.format !== "online" && (
+            <section className="mt-12">
+              <h2 className="text-[20px] font-bold mb-3">오시는 길</h2>
+              <div className="rounded-2xl bg-surface p-5">
+                <p className="font-bold">버드아카데미 교육장</p>
+                <p className="mt-1 text-[15px] text-ink-2">{ACADEMY_ADDRESS}</p>
+                {course.location && <p className="text-[14px] text-sub">강의실 · {course.location}</p>}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <a href={ACADEMY_MAP_LINKS.naver} target="_blank" rel="noopener noreferrer" className="btn-gray btn-sm">네이버 지도</a>
+                  <a href={ACADEMY_MAP_LINKS.kakao} target="_blank" rel="noopener noreferrer" className="btn-gray btn-sm">카카오맵</a>
+                </div>
+              </div>
             </section>
           )}
 
           <section className="mt-12">
-            <h2 className="text-[20px] font-bold mb-3">취소·환불 규정</h2>
+            <h2 className="text-[20px] font-bold mb-3">{isFree ? "취소 규정" : "취소·환불 규정"}</h2>
             <div className="rounded-2xl bg-surface p-5">
-              <CancelPolicy days={course.cancel_deadline_days} multiSession={Boolean(nextOpenIsMulti(sessions))} />
+              <CancelPolicy days={course.cancel_deadline_days} multiSession={Boolean(nextOpenIsMulti(sessions))} free={isFree} />
             </div>
           </section>
 
@@ -223,8 +276,13 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
 
         <aside id="apply" className="lg:sticky lg:top-20 self-start panel p-5 scroll-mt-20">
           <p className="text-[14px] text-sub">{course.title}</p>
-          <p className="mt-1 text-[24px] font-extrabold tracking-[-0.03em]">{formatPrice(course.price)}</p>
-          {course.price_note && <p className="text-[13px] text-sub">{course.price_note}</p>}
+          <p className={`mt-1 text-[24px] font-extrabold tracking-[-0.03em] ${price.hidden ? "text-sub" : ""}`}>{price.main}</p>
+          {price.detail && <p className="text-[13px] text-sub">{price.detail}</p>}
+          {price.hidden && (
+            <p className="mt-1 text-[13px] text-sub">
+              고정현헤어 사내 교육이에요. {viewer ? "교육비는 버드아카데미로 문의해 주세요." : "고정현헤어 소속이면 로그인 후 확인할 수 있어요."}
+            </p>
+          )}
           <div className="mt-5">
             {myEnrollment !== null ? (
               <div className="rounded-2xl bg-blue-weak p-5">
@@ -258,7 +316,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
                 signedIn={Boolean(viewer)}
                 profileComplete={Boolean(viewer?.profileComplete)}
                 applicant={viewer?.profileComplete ? { name: viewer.name!, phone: viewer.phone!, line: affiliationLine(viewer.orgType, viewer.branch, viewer.jobTitle) } : null}
-                blockedReason={course.internal_only && viewer?.orgType === "external" ? "고정현헤어 소속 인턴만 신청할 수 있는 과정이에요." : null}
+                blockedReason={course.internal_only && viewer?.orgType === "external" ? "고정현헤어 소속만 신청할 수 있는 사내 과정이에요." : null}
                 closed={course.status !== "published"}
                 policy={policy}
                 sessions={openSessions.map((s) => {
@@ -266,7 +324,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
                   return {
                     id: s.id,
                     label: s.label,
-                    detail: [formatRange(s.starts_on, s.ends_on), s.schedule_text].filter(Boolean).join(" · ") || null,
+                    detail: [formatRange(s.starts_on, s.ends_on) ?? "수업일 확정 전", s.schedule_text].filter(Boolean).join(" · ") || null,
                     full,
                     deadlinePassed: !applyOpen(s.apply_deadline),
                     deadlineText: s.apply_deadline ? `${formatDate(s.apply_deadline)}까지 신청` : null,
@@ -282,8 +340,8 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
       {/* 모바일: 신청 영역으로 바로 가는 하단 바 */}
       <div className="lg:hidden fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 backdrop-blur px-4 py-3 flex items-center gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[17px] font-extrabold tracking-[-0.03em]">{formatPrice(course.price)}</p>
-          <p className="text-[12px] text-sub truncate">{course.price_note ?? course.schedule_summary ?? ""}</p>
+          <p className="text-[17px] font-extrabold tracking-[-0.03em]">{price.main}</p>
+          <p className="text-[12px] text-sub truncate">{price.detail ?? course.schedule_summary ?? ""}</p>
         </div>
         <a href="#apply" className="btn-primary px-6">
           {myEnrollment ? "신청 현황" : waitingNextRound || course.status !== "published" ? "모집 안내" : "신청하기"}

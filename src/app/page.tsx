@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { listLevelCourses, listPublicCourses, listUpcomingSessions } from "@/lib/queries";
+import { getViewer } from "@/lib/auth";
 import { CourseCard } from "@/components/course-card";
 import { Avatar } from "@/components/avatar";
-import { TRACK_LABEL, formatPrice } from "@/lib/format";
+import { TRACK_LABEL, coursePrice, isRecruiting } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-// 기존 사이트(budacademy.co.kr)에 게시된 누적 수치
+// 기존 사이트(budacademy.co.kr) 누적 운영 수치. 신청 건수 ≥ 참여 인원 순서가 맞도록 단위·이름 정리
 const STATS = [
-  { value: "12,175명+", label: "누적 수강 신청" },
-  { value: "20,692명+", label: "참여 디자이너" },
-  { value: "2,540회+", label: "개설된 강의" },
+  { value: "20,692건+", label: "누적 수강 신청" },
+  { value: "12,175명+", label: "교육 참여 디자이너" },
+  { value: "2,540회+", label: "진행한 교육" },
 ];
 
 function DateBlock({ date }: { date: string }) {
@@ -26,8 +27,13 @@ function DateBlock({ date }: { date: string }) {
 }
 
 export default async function Home() {
-  const [levels, all, upcoming] = await Promise.all([listLevelCourses(), listPublicCourses(), listUpcomingSessions(4)]);
-  const others = all.filter((c) => c.track !== "level");
+  const [levels, all, upcoming, viewer] = await Promise.all([listLevelCourses(), listPublicCourses(), listUpcomingSessions(4), getViewer()]);
+  const others = all
+    .filter((c) => c.track !== "level" && c.status === "published")
+    .map((c, i) => ({ c, i, open: isRecruiting(c, c.sessions) }))
+    .sort((a, b) => Number(b.open) - Number(a.open) || a.i - b.i)
+    .map((r) => r.c);
+  const pastCount = all.filter((c) => c.status === "closed").length;
 
   return (
     <div>
@@ -61,6 +67,7 @@ export default async function Home() {
               </div>
             ))}
           </dl>
+          <p className="mt-1.5 text-right text-[11px] text-muted">버드아카데미 누적 운영 기준</p>
         </div>
       </section>
 
@@ -122,7 +129,7 @@ export default async function Home() {
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] font-semibold text-blue">{TRACK_LABEL[s.course.track as keyof typeof TRACK_LABEL]}</p>
                       <p className="text-[16px] font-bold text-ink truncate">{s.course.title}</p>
-                      <p className="text-[14px] text-sub truncate">{[s.schedule_text, formatPrice(s.course.price)].filter(Boolean).join(" · ")}</p>
+                      <p className="text-[14px] text-sub truncate">{[s.schedule_text, coursePrice(s.course, viewer).main].filter(Boolean).join(" · ")}</p>
                     </div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {s.course.thumbnail_url && <img src={s.course.thumbnail_url} alt="" className="hidden sm:block size-16 rounded-xl object-cover shrink-0" />}
@@ -139,13 +146,19 @@ export default async function Home() {
             <div className="flex items-end justify-between mb-5">
               <div>
                 <h2 className="text-[24px] font-extrabold tracking-[-0.04em]">초청 원장 · 브랜드 · 리더십</h2>
-                <p className="mt-1 text-sub">현장에서 이름난 원장과 브랜드 교육팀을 직접 모셔 와요.</p>
+                <p className="mt-1 text-sub">현장에서 이름난 원장과 브랜드 교육팀을 직접 모셔 와요. 초청 원장 클래스는 다른 살롱 디자이너도 신청할 수 있어요.</p>
               </div>
-              <Link href="/courses" className="hidden sm:block text-[15px] text-sub hover:text-ink">전체 강좌</Link>
+              <Link href="/courses" className="hidden sm:block shrink-0 text-[15px] text-sub hover:text-ink">전체 강좌</Link>
             </div>
             <div className="grid gap-x-5 gap-y-10 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {others.map((c) => <CourseCard key={c.id} course={c} />)}
+              {others.map((c) => <CourseCard key={c.id} course={c} viewer={viewer} />)}
             </div>
+            {pastCount > 0 && (
+              <Link href="/courses#past" className="mt-8 flex items-center justify-between rounded-2xl border border-line px-5 py-4 hover:bg-surface">
+                <span className="text-[15px]"><b className="font-bold">지난 교육 둘러보기</b><span className="ml-2 text-sub">그동안 버드아카데미에서 진행한 초청 강의와 특강</span></span>
+                <span aria-hidden className="text-muted">→</span>
+              </Link>
+            )}
           </section>
         )}
 
