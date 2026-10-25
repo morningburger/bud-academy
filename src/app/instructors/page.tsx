@@ -53,10 +53,10 @@ export default async function InstructorsPage({ searchParams }: PageProps<"/inst
 
       <nav className="mt-6 flex gap-2" aria-label="강사 구분">
         <Link href="/instructors" aria-current={!external ? "page" : undefined} className={`${!external ? "bg-ink text-white" : "bg-surface text-sub hover:text-ink"} rounded-full px-4 h-10 inline-flex items-center text-[15px] font-semibold`}>
-          내부 강사진 <span className="ml-1.5 opacity-60">{internal.length}</span>
+          내부 강사진
         </Link>
         <Link href="/instructors?tab=external" aria-current={external ? "page" : undefined} className={`${external ? "bg-ink text-white" : "bg-surface text-sub hover:text-ink"} rounded-full px-4 h-10 inline-flex items-center text-[15px] font-semibold`}>
-          외부 초청 강사 <span className="ml-1.5 opacity-60">{guests.length}</span>
+          외부 초청 강사
         </Link>
       </nav>
 
