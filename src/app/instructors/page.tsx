@@ -87,7 +87,7 @@ export default async function InstructorsPage({ searchParams }: PageProps<"/inst
           <Link href="/partner" className="text-blue font-semibold">강사로 참여하기</Link>
         </div>
       ) : (
-        <Section eyebrow="GUEST" title="외부 초청 강사" desc="버드아카데미가 모신 다른 살롱의 원장님들이에요." list={guests} />
+        <Section eyebrow="GUEST" title="외부 초청 강사" desc="그동안 버드아카데미에서 강의한 다른 살롱 원장님과 분야별 전문가들이에요." list={guests} />
       )}
     </div>
   );
