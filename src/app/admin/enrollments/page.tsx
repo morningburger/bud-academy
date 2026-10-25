@@ -28,7 +28,10 @@ export default async function AdminEnrollments({ searchParams }: PageProps<"/adm
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-[26px] font-extrabold tracking-[-0.04em]">수강 신청</h1>
-        <a href={`/admin/enrollments/export${qs({})}`} className="btn-gray btn-sm">엑셀로 내려받기</a>
+        <div className="flex gap-2">
+          <Link href="/admin/enrollments/import" className="btn-gray btn-sm">기존 사이트 신청 옮기기</Link>
+          <a href={`/admin/enrollments/export${qs({})}`} className="btn-gray btn-sm">엑셀로 내려받기</a>
+        </div>
       </div>
       <p className="mt-1 text-sub text-[15px]">신청은 바로 확정돼요. 수강생이 취소를 요청하면 &lsquo;취소 요청&rsquo;에 모이고, 승인해야 취소돼요.</p>
 

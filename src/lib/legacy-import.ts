@@ -161,3 +161,33 @@ export function toLegacyRows(table: unknown[][], branches: string[]) {
   }
   return { rows: [...rows.values()], skipped };
 }
+
+export interface LegacyApplicant {
+  email: string | null;
+  phone: string | null;
+  raw_name: string | null;
+}
+
+const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
+const PHONE_RE = /01[016789][-\s.]?\d{3,4}[-\s.]?\d{4}/;
+
+/** 강좌별 수강생 목록(라이브클래스 수강생 내보내기 등)에서 이메일·휴대폰·이름을 뽑는다. 열 순서는 상관없음 */
+export function toLegacyApplicants(table: unknown[][]) {
+  const headerIdx = table.findIndex((r) => r.some((c) => /이름|이메일|연락처|휴대폰|신청자/.test(cellText(c))));
+  const header = headerIdx >= 0 ? table[headerIdx].map((c) => cellText(c).replace(/\s/g, "")) : [];
+  const nameCol = header.findIndex((h) => /이름|성명|신청자/.test(h));
+  const out = new Map<string, LegacyApplicant>();
+  let skipped = 0;
+  for (const r of table.slice(headerIdx + 1)) {
+    const cells = r.map(cellText);
+    const joined = cells.join(" ");
+    const email = joined.match(EMAIL_RE)?.[0].toLowerCase() ?? null;
+    const phoneRaw = joined.match(PHONE_RE)?.[0] ?? null;
+    const phone = phoneRaw ? phoneRaw.replace(/[^0-9]/g, "") : null;
+    if (!email && !phone) { skipped++; continue; }
+    let name = nameCol >= 0 ? cells[nameCol]?.trim() || null : null;
+    if (name) name = name.replace(EMAIL_RE, "").replace(PHONE_RE, "").trim() || null;
+    out.set(email ?? `tel:${phone}`, { email, phone, raw_name: name });
+  }
+  return { rows: [...out.values()], skipped };
+}
