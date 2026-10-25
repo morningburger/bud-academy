@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getInstructor } from "@/lib/queries";
-import { Avatar } from "@/components/avatar";
+import { Portrait } from "@/components/avatar";
 import { SellerBadge } from "@/components/badges";
 import { CourseCard } from "@/components/course-card";
 import { TEAM_LABEL } from "@/lib/format";
@@ -14,8 +14,8 @@ export default async function InstructorPage({ params }: PageProps<"/instructors
 
   return (
     <div className="mx-auto max-w-[1040px] px-4 sm:px-6 pt-10">
-      <div className="flex items-center gap-5">
-        <Avatar name={instructor.name} url={instructor.photo_url} size={88} />
+      <div className="flex flex-col sm:flex-row sm:items-end gap-6">
+        <Portrait name={instructor.name} url={instructor.photo_url} className="w-44 sm:w-56 rounded-2xl" />
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-[28px] font-extrabold tracking-[-0.04em]">{instructor.name}</h1>
