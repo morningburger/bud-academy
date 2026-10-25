@@ -27,7 +27,7 @@ export default async function ImportEnrollmentsPage() {
         <li>여기서 새 사이트의 같은 반을 고르고 파일을 올려요. 반마다 한 번씩 하면 돼요.</li>
         <li>이미 가입한 회원은 바로 &lsquo;수강 확정&rsquo;으로 들어가요. 아직 가입 안 한 사람은 같은 이메일(또는 휴대폰)로 가입하는 순간 자동으로 들어가요.</li>
       </ol>
-      <ImportEnrollmentsForm sessions={list.filter((s) => s.open)} />
+      <ImportEnrollmentsForm sessions={[...list.filter((s) => s.open), ...list.filter((s) => !s.open).map((s) => ({ ...s, label: `${s.label} (마감·진행 중)` }))]} />
 
       <h2 className="mt-12 mb-3 text-[18px] font-bold">옮긴 신청</h2>
       {bySession.size === 0 ? (

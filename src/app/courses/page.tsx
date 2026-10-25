@@ -6,7 +6,7 @@ import { TRACK_LABEL } from "@/lib/format";
 
 export const metadata: Metadata = { title: "강좌" };
 
-const TRACKS = ["level", "guest", "brand", "leadership"] as const;
+const TRACKS = ["level", "trend", "guest", "brand", "leadership"] as const;
 
 export default async function CoursesPage({ searchParams }: PageProps<"/courses">) {
   const { track } = await searchParams;

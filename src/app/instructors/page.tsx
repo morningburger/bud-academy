@@ -77,7 +77,7 @@ export default async function InstructorsPage({ searchParams }: PageProps<"/inst
               </div>
             </Link>
           ))}
-          <Section title="트렌드팀" desc="마스터 콴과 함께 트렌드 커트·열펌 과정을 이끄는 강사진이에요." list={trend} />
+          <Section title="트렌드팀" desc="마스터 콴과 함께 트렌드 과정을 이끄는 강사진이에요." list={trend} />
           <Section title="교육팀" desc="인턴 단계별 과정(LV1~3)을 맡는 강사진이에요." list={education} />
         </>
       ) : guests.length === 0 ? (
