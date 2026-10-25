@@ -63,6 +63,12 @@ export function formatDateTime(d: string) {
   }).format(new Date(d));
 }
 
+export const TEAM_LABEL: Record<string, string> = {
+  director: "총괄 디렉터",
+  trend: "트렌드팀",
+  education: "교육팀",
+};
+
 export const JOB_TITLES = ["인턴", "디자이너", "팀장", "실장", "점장", "부원장", "원장", "대표", "본사 직원", "기타"];
 
 export const ORG_LABEL: Record<OrgType, string> = { gohair: "고정현헤어", external: "다른 살롱" };

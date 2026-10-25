@@ -205,7 +205,8 @@ export async function createInstructorByAdmin(_prev: ActionState, form: FormData
     name,
     headline: strOrNull(form, "headline"),
     branch_name: strOrNull(form, "branch_name"),
-    affiliation: str(form, "affiliation") || "gohair",
+    affiliation: str(form, "team") ? "gohair" : "external",
+    team: ["director", "trend", "education"].includes(str(form, "team")) ? str(form, "team") : null,
     status: "approved",
     user_id: null,
   });

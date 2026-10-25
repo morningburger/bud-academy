@@ -32,6 +32,21 @@ export function AdminInstructorForm({ instructor: i }: { instructor: Instructor 
           <input id="branch_name" name="branch_name" className="input" defaultValue={i.branch_name ?? ""} />
         </div>
       </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="field-label" htmlFor="team">강사진 구분</label>
+          <select id="team" name="team" className="input" defaultValue={i.team ?? (i.affiliation === "external" ? "" : "education")}>
+            <option value="director">총괄 디렉터</option>
+            <option value="trend">트렌드팀</option>
+            <option value="education">교육팀</option>
+            <option value="">외부 초청 강사</option>
+          </select>
+        </div>
+        <div>
+          <label className="field-label" htmlFor="sort_order">보이는 순서 (작을수록 앞)</label>
+          <input id="sort_order" name="sort_order" type="number" min={0} max={999} className="input" defaultValue={i.sort_order ?? 100} />
+        </div>
+      </div>
       <div>
         <label className="field-label" htmlFor="headline">한 줄 소개</label>
         <input id="headline" name="headline" className="input" defaultValue={i.headline ?? ""} />

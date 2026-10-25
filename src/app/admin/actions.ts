@@ -63,6 +63,13 @@ export async function saveInstructorByAdmin(_prev: AdminState, form: FormData): 
       career: strOrNull(form, "career"),
       instagram: strOrNull(form, "instagram")?.replace(/^@/, "") ?? null,
       branch_name: strOrNull(form, "branch_name"),
+      ...(form.has("team")
+        ? {
+            team: ["director", "trend", "education"].includes(str(form, "team")) ? str(form, "team") : null,
+            affiliation: str(form, "team") ? "gohair" : "external",
+          }
+        : {}),
+      ...(form.has("sort_order") ? { sort_order: Math.max(0, Math.min(999, Number(str(form, "sort_order")) || 100)) } : {}),
       ...(form.get("remove_photo") === "on" ? { photo_url: null } : photo_url ? { photo_url } : {}),
     })
     .eq("id", id);

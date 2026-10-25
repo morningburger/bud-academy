@@ -12,10 +12,12 @@ export function AddInstructorForm() {
         <input name="name" className="input" required />
       </div>
       <div>
-        <label className="field-label">소속</label>
-        <select name="affiliation" className="input" defaultValue="gohair">
-          <option value="gohair">고정현헤어 소속</option>
-          <option value="external">외부 강사</option>
+        <label className="field-label">강사진 구분</label>
+        <select name="team" className="input" defaultValue="education">
+          <option value="education">내부 · 교육팀</option>
+          <option value="trend">내부 · 트렌드팀</option>
+          <option value="director">내부 · 총괄 디렉터</option>
+          <option value="">외부 초청 강사</option>
         </select>
       </div>
       <div>

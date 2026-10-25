@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const ITEMS = [
   { href: "/admin", label: "한눈에 보기" },
   { href: "/admin/enrollments", label: "수강 신청" },
+  { href: "/admin/settlement", label: "수강자 정산" },
   { href: "/admin/courses", label: "강좌·회차" },
   { href: "/admin/instructors", label: "강사" },
   { href: "/admin/members", label: "회원" },

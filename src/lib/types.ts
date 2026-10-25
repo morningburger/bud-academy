@@ -2,6 +2,7 @@ export type CourseTrack = "level" | "guest" | "brand" | "leadership" | "trend" |
 export type CourseFormat = "offline" | "online" | "hybrid";
 export type CourseStatus = "draft" | "pending_review" | "published" | "rejected" | "closed";
 export type InstructorStatus = "pending" | "approved" | "rejected" | "suspended";
+export type InstructorTeam = "director" | "trend" | "education";
 export type OrgType = "gohair" | "external";
 export type EnrollmentStatus = "requested" | "approved" | "canceled" | "completed";
 
@@ -17,6 +18,8 @@ export interface Instructor {
   affiliation: "gohair" | "external";
   branch_name: string | null;
   status: InstructorStatus;
+  team: InstructorTeam | null;
+  sort_order: number;
   approved_at: string | null;
   created_at: string;
 }

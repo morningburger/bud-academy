@@ -3,6 +3,7 @@ import { getInstructor } from "@/lib/queries";
 import { Avatar } from "@/components/avatar";
 import { SellerBadge } from "@/components/badges";
 import { CourseCard } from "@/components/course-card";
+import { TEAM_LABEL } from "@/lib/format";
 
 export default async function InstructorPage({ params }: PageProps<"/instructors/[id]">) {
   const { id } = await params;
@@ -19,6 +20,7 @@ export default async function InstructorPage({ params }: PageProps<"/instructors
           <div className="flex items-center gap-2">
             <h1 className="text-[28px] font-extrabold tracking-[-0.04em]">{instructor.name}</h1>
             <SellerBadge isOfficial={false} instructor={instructor} />
+            {instructor.team && <span className="chip bg-ink text-white">{TEAM_LABEL[instructor.team]}</span>}
           </div>
           {instructor.headline && <p className="text-sub mt-1">{instructor.headline}</p>}
           <p className="text-[14px] text-muted mt-1">

@@ -76,7 +76,7 @@ export async function listApprovedInstructors() {
     .from("instructors")
     .select("*")
     .eq("status", "approved")
-    .order("affiliation", { ascending: true })
+    .order("sort_order", { ascending: true })
     .order("approved_at", { ascending: true });
   return (data ?? []) as Instructor[];
 }
