@@ -142,6 +142,7 @@ export default async function ManageCoursePage({ params, searchParams }: PagePro
                         </p>
                       </div>
                       <div className="flex gap-1.5 flex-wrap justify-end">
+                        {s.status !== "canceled" && <Link href={`/attendance/${s.id}`} className="btn-weak btn-sm">출석부</Link>}
                         <SessionEditToggle courseId={course.id} session={s} />
                         <form action={deleteSession}>
                           <input type="hidden" name="id" value={s.id} />

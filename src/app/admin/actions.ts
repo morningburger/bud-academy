@@ -77,3 +77,28 @@ export async function saveInstructorByAdmin(_prev: AdminState, form: FormData): 
   revalidatePath("/", "layout");
   return { ok: "저장했어요." };
 }
+
+/** 관리자가 등록한 강사를 회원 계정과 연결 (연결되면 강사 스튜디오·출석 체크를 쓸 수 있어요) */
+export async function linkInstructorAccount(_prev: AdminState, form: FormData): Promise<AdminState> {
+  try { await adminOnly(); } catch (e) { return { error: (e as Error).message }; }
+  const id = str(form, "id");
+  const supabase = await createClient();
+
+  if (str(form, "op") === "unlink") {
+    const { error } = await supabase.from("instructors").update({ user_id: null }).eq("id", id);
+    if (error) return { error: "연결을 끊지 못했어요." };
+    revalidatePath(`/admin/instructors/${id}`);
+    return { ok: "계정 연결을 끊었어요." };
+  }
+
+  const email = str(form, "email").toLowerCase();
+  if (!email.includes("@")) return { error: "이메일을 정확히 입력해 주세요." };
+  const { data: profile } = await supabase.from("profiles").select("id, name").ilike("email", email).maybeSingle();
+  if (!profile) return { error: "이 이메일로 가입한 회원이 없어요. 먼저 사이트에서 회원가입을 해 달라고 안내해 주세요." };
+  const { data: taken } = await supabase.from("instructors").select("id, name").eq("user_id", profile.id).maybeSingle();
+  if (taken && taken.id !== id) return { error: `이 계정은 이미 ${taken.name} 강사와 연결돼 있어요.` };
+  const { error } = await supabase.from("instructors").update({ user_id: profile.id }).eq("id", id);
+  if (error) return { error: "연결하지 못했어요. 잠시 후 다시 시도해 주세요." };
+  revalidatePath(`/admin/instructors/${id}`);
+  return { ok: `${profile.name ?? email}님 계정과 연결했어요. 이제 강사 스튜디오에서 출석을 부를 수 있어요.` };
+}

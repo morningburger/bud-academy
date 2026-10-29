@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CourseStatusChip, InstructorStatusChip } from "@/components/status-chip";
 import { Avatar } from "@/components/avatar";
 import type { Course } from "@/lib/types";
+import { addDays, formatRange, todayKST } from "@/lib/format";
 
 export const metadata: Metadata = { title: "강사 스튜디오" };
 
@@ -19,6 +20,25 @@ export default async function StudioPage() {
     .order("created_at", { ascending: false });
   const courses = (data ?? []) as (Course & { enrollments: { status: string; cancel_requested_at: string | null }[] })[];
   const approved = me.status === "approved";
+
+  // 출석 체크: 내가 연 강좌 + 강사진으로 들어간 강좌의 회차
+  const { data: lineup } = approved
+    ? await supabase.from("course_instructors").select("course_id").eq("instructor_id", me.id)
+    : { data: [] };
+  const taughtIds = [...new Set([...courses.map((c) => c.id), ...(lineup ?? []).map((l) => l.course_id as string)])];
+  const { data: sessionRows } = taughtIds.length
+    ? await supabase
+        .from("course_sessions")
+        .select("id, label, starts_on, ends_on, status, course:courses(title)")
+        .in("course_id", taughtIds)
+        .neq("status", "canceled")
+    : { data: [] };
+  const recent = addDays(todayKST(), -14);
+  const classSessions = ((sessionRows ?? []) as unknown as {
+    id: string; label: string; starts_on: string | null; ends_on: string | null; course: { title: string } | null;
+  }[])
+    .filter((s) => !s.ends_on || s.ends_on >= recent)
+    .sort((a, b) => (a.starts_on ?? "9999").localeCompare(b.starts_on ?? "9999"));
 
   return (
     <div className="mx-auto max-w-[880px] px-4 sm:px-6 pt-10">
@@ -43,6 +63,29 @@ export default async function StudioPage() {
           {me.status === "rejected" && <>입점 신청이 반려됐어요. <Link href="/partner/apply" className="text-blue font-semibold">신청서를 보완해 다시 보내기</Link></>}
           {me.status === "suspended" && "활동이 일시 중지된 상태예요. 버드아카데미에 문의해 주세요."}
         </div>
+      )}
+
+      {approved && classSessions.length > 0 && (
+        <>
+          <h2 className="mt-10 mb-3 text-[18px] font-bold">출석 체크</h2>
+          <ul className="flex flex-col gap-2">
+            {classSessions.map((s) => {
+              const live = s.starts_on && s.starts_on <= todayKST() && (!s.ends_on || s.ends_on >= todayKST());
+              return (
+                <li key={s.id}>
+                  <Link href={`/attendance/${s.id}`} className="panel flex items-center justify-between gap-4 p-5 hover:bg-[#fafbfc]">
+                    <div className="min-w-0">
+                      {live && <span className="chip-green">진행 중</span>}
+                      <p className={`${live ? "mt-1.5 " : ""}font-bold truncate`}>{s.course?.title} · {s.label}</p>
+                      <p className="text-[13px] text-muted">{formatRange(s.starts_on, s.ends_on) ?? "일정 미정"}</p>
+                    </div>
+                    <span className="btn-weak btn-sm shrink-0">출석 부르기</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
 
       {approved && (
